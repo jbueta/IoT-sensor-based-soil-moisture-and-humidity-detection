@@ -87,13 +87,13 @@ Navigate your browser to:
 
 ### 6. Git Branching & Remote Setup
 The local repository has been initialized and fully committed on a dedicated branch:
-* **Proposed Repository Name:** `robosense-sensor-based-intelligence-system`
+* **Proposed Repository Name:** `IoT-sensor-based-intelligence-system`
 * **Active Branch:** `feat/main-interface`
 
 To link this local workspace to your GitHub repository and push the initial commit:
 ```bash
 # 1. Add your remote repository URL (GitHub/GitLab staging)
-git remote add origin https://github.com/jbueta/robosense-sensor-based-intelligence-system.git
+git remote add origin https://github.com/jbueta/IoT-sensor-based-intelligence-system.git
 
 # 2. Push the working branch to your remote repository
 git push -u origin feat/main-interface
