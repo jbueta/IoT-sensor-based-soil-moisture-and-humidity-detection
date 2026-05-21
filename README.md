@@ -87,16 +87,20 @@ Navigate your browser to:
 
 ### 6. Git Branching & Remote Setup
 The local repository has been initialized and fully committed on a dedicated branch:
-* **Proposed Repository Name:** `IoT-sensor-based-intelligence-system`
-* **Active Branch:** `feat/main-interface`
+* **Proposed Repository Name:** `IoT-sensor-based-soil-moisture-and-humidity-detection`
+* **Default Branch:** `main`
+* **Working Branch:** `staging`
 
 To link this local workspace to your GitHub repository and push the initial commit:
 ```bash
 # 1. Add your remote repository URL (GitHub/GitLab staging)
-git remote add origin https://github.com/jbueta/IoT-sensor-based-intelligence-system.git
+git remote add origin https://github.com/jbueta/IoT-sensor-based-soil-moisture-and-humidity-detection.git
 
-# 2. Push the working branch to your remote repository
-git push -u origin feat/main-interface
+# 2. Push the default branch first (this sets main as the default on GitHub)
+git push -u origin main
+
+# 3. Push the staging branch next
+git push -u origin staging
 ```
 
 ---
