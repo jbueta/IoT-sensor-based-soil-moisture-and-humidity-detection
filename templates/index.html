@@ -1,0 +1,3411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboSense Monitor - Premium IoT Analytics</title>
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit (Premium geometric fonts for numbers and UI) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ==========================================
+           DESIGN SYSTEM & COLOR TOKENS (LIGHT GLASS SPEC)
+           ========================================== */
+        :root {
+            --bg-page: #d4ddd8;          /* Solid grounded cool sage-grey page background */
+            --bg-card: #ffffff;
+            --border-color: #cbd5e1;      /* Well-defined crisp slate border */
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+            
+            /* High-Fidelity Deep Accent Colors - optimized for crisp contrast on light solid cards */
+            --color-emerald: #166534;    /* Optimal (Dark Emerald) */
+            --color-cyan: #0369a1;       /* Temperature / Humidity (Dark Slate Blue) */
+            --color-mint: #0f766e;       /* Soil Moisture (Dark Teal) */
+            --color-warn: #92400e;       /* Warning Alert Accent */
+            --color-critical: #991b1b;   /* Critical Alert Accent */
+            
+            /* High Contrast Text Hierarchy */
+            --text-main: #0f172a;        /* High-contrast slate-900 */
+            --text-secondary: #1e293b;   /* Clear slate-800 */
+            --text-muted: #475569;       /* Deep slate-600 for highly legible subtexts */
+            --sidebar-width: 240px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ==========================================
+           AMBIENT NEON GLOW EFFECTS (BACKGROUND)
+           ========================================== */
+        .glow-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            z-index: -2;
+            background: linear-gradient(135deg, #dae4de 0%, #cbd6cf 50%, #d4e0d9 100%);
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(140px);
+            opacity: 0.3;
+            mix-blend-mode: multiply;
+            animation: float-glow 25s infinite alternate ease-in-out;
+        }
+
+        .blob-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #86efac 0%, rgba(134, 239, 172, 0) 70%);
+            top: -10%;
+            right: 5%;
+            animation-duration: 22s;
+        }
+
+        .blob-2 {
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, #7dd3fc 0%, rgba(125, 211, 252, 0) 70%);
+            bottom: -15%;
+            left: 10%;
+            animation-duration: 28s;
+        }
+
+        @keyframes float-glow {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(60px, 80px) scale(1.1); }
+            100% { transform: translate(-30px, -50px) scale(0.9); }
+        }
+
+        /* ==========================================
+           WELCOME SPLASH SCREEN (DUAL-PANE PREMIUM SPLIT)
+           ========================================== */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #f0f8f4 0%, #e2efe8 50%, #f4faf6 100%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s;
+            overflow-y: auto;
+        }
+
+        .splash-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .splash-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(2, 132, 199, 0.05) 50%, rgba(255, 255, 255, 0) 75%);
+            filter: blur(100px);
+            z-index: 1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .splash-container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 0 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 64px;
+            z-index: 2;
+            position: relative;
+        }
+
+        .splash-left-pane {
+            flex: 1.1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .splash-right-pane {
+            flex: 0.9;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .logo-animation-container {
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1.5px solid var(--border-color);
+            border-radius: 24px;
+            padding: 12px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+            transition: all 0.3s ease;
+        }
+        
+        .logo-animation-container:hover {
+            border-color: #10b981;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(16, 185, 129, 0.1);
+        }
+
+        .logo-ring-spin {
+            transform-origin: center;
+            animation: rotate-spin 25s linear infinite;
+        }
+
+        @keyframes rotate-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .splash-title {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: 5px;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #0f766e, #0284c7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .splash-subtitle {
+            font-size: 13px;
+            color: #0d9488;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 24px;
+        }
+
+        .splash-description {
+            font-size: 15.5px;
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 36px;
+            max-width: 480px;
+            font-weight: 500;
+        }
+
+        /* Redesigned Ingestion Status Card */
+        .splash-handshake-panel {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1.5px solid var(--border-color);
+            border-radius: 16px;
+            padding: 12px 20px;
+            margin-bottom: 36px;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.02);
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 440px;
+        }
+        
+        .splash-handshake-panel:hover {
+            border-color: #10b981;
+            background-color: #ffffff;
+        }
+
+        .handshake-pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--color-emerald);
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+            animation: pulse-green-glow 2s infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-green-glow {
+            0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+
+        .handshake-text-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .handshake-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .handshake-text strong {
+            font-family: var(--font-mono);
+            color: var(--text-main);
+            font-weight: 800;
+        }
+
+        .splash-action-area {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .splash-loader {
+            width: 280px;
+            height: 5px;
+            background-color: rgba(0, 0, 0, 0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease, height 0.5s ease, margin 0.5s ease;
+        }
+
+        .splash-loader-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981, #0284c7);
+            border-radius: 3px;
+            animation: fill-loader 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .welcome-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #10b981, #0d9488);
+            border: none;
+            border-radius: 30px;
+            color: #FFFFFF;
+            padding: 16px 36px;
+            font-family: var(--font-sans);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+            max-width: max-content;
+        }
+
+        .welcome-btn svg {
+            transition: transform 0.3s ease;
+        }
+
+        .welcome-btn:hover {
+            background: linear-gradient(135deg, #059669, #0f766e);
+            box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .welcome-btn:hover svg {
+            transform: translateX(4px);
+        }
+
+        .welcome-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .splash-loader.fade-out-loader {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+        }
+
+        @keyframes fill-loader {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        /* Right Pane Elements */
+        .showcase-header {
+            font-size: 11px;
+            font-weight: 800;
+            color: #0d9488;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .showcase-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .showcase-card:hover {
+            transform: translateX(-6px);
+            background: #ffffff;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+        }
+
+        .showcase-card.shadow-card-temp:hover { border-color: var(--color-cyan); }
+        .showcase-card.shadow-card-hum:hover { border-color: var(--color-emerald); }
+        .showcase-card.shadow-card-soil:hover { border-color: var(--color-mint); }
+
+        .showcase-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .showcase-card:hover .showcase-icon {
+            transform: scale(1.08) rotate(3deg);
+        }
+
+        .icon-temp { background-color: #e0f2fe; color: #0284c7; }
+        .icon-hum { background-color: #e6f4ea; color: #15803d; }
+        .icon-soil { background-color: #e6fcf5; color: #0f766e; }
+
+        .showcase-card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            flex-grow: 1;
+        }
+
+        .showcase-card h4 {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            letter-spacing: -0.2px;
+        }
+
+        .showcase-card p {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 10px;
+            font-weight: 500;
+            max-width: 320px;
+        }
+
+        .showcase-badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3.5px 12px;
+            border-radius: 12px;
+        }
+
+        .badge-temp { background-color: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc; }
+        .badge-hum { background-color: #e6f4ea; color: #15803d; border: 1.5px solid #a3cfbb; }
+        .badge-soil { background-color: #e6fcf5; color: #0f766e; border: 1.5px solid #96f2d7; }
+
+        .showcase-card-visual {
+            opacity: 0.65;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        
+        .showcase-card:hover .showcase-card-visual {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        /* Miniature Sidebar SVG Logo */
+        .brand-icon-svg {
+            animation: pulse-mini-logo 2.5s infinite ease-in-out;
+            flex-shrink: 0;
+        }
+        
+        @keyframes pulse-mini-logo {
+            0% { transform: scale(1); filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.1)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.25)); }
+            100% { transform: scale(1); filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.1)); }
+        }
+
+        /* Responsive adaptations */
+        @media (max-width: 968px) {
+            .splash-screen {
+                align-items: flex-start;
+            }
+            .splash-container {
+                flex-direction: column;
+                padding: 48px 24px;
+                gap: 40px;
+                height: auto;
+                max-width: 600px;
+            }
+            .splash-left-pane {
+                align-items: center;
+                text-align: center;
+            }
+            .splash-description {
+                max-width: 100%;
+            }
+            .splash-handshake-panel {
+                max-width: 100%;
+                justify-content: center;
+            }
+            .welcome-btn {
+                margin: 0 auto;
+            }
+            .splash-loader {
+                margin: 0 auto;
+            }
+            .showcase-card {
+                padding: 16px 20px;
+            }
+            .showcase-card-visual {
+                display: none;
+            }
+        }
+
+        @keyframes fade-in-up {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==========================================
+           PDF PREVIEW & EXPORT MODAL STYLING
+           ========================================== */
+        .pdf-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .pdf-modal-card {
+            background: #ffffff;
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+            overflow: hidden;
+            animation: modal-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modal-slide-up {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .pdf-modal-header {
+            padding: 18px 28px;
+            border-bottom: 1.5px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+
+        .pdf-modal-header h3 {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .pdf-close-icon {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .pdf-close-icon:hover {
+            color: var(--color-critical);
+        }
+
+        .pdf-modal-scroll-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 40px;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Printable Document Layout */
+        .printable-report {
+            background: #ffffff;
+            width: 100%;
+            max-width: 800px;
+            min-height: 100%;
+            padding: 48px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            color: #0f172a;
+            font-family: var(--font-sans);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .report-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .report-brand h2 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+
+        .report-subtitle {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0d9488;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .report-header-right {
+            text-align: right;
+            font-size: 12px;
+            color: #475569;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .report-divider {
+            height: 1.5px;
+            background-color: #cbd5e1;
+            margin: 24px 0;
+            width: 100%;
+        }
+
+        .report-section-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .report-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+
+        .report-stat-box {
+            background-color: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .report-stat-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .report-stat-value {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 30px;
+        }
+
+        .report-table th {
+            background: #f1f5f9;
+            border-bottom: 2px solid #cbd5e1;
+            color: #334155;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        .report-table td {
+            border-bottom: 1.5px solid #e2e8f0;
+            padding: 9px 12px;
+            color: #334155;
+            text-align: left;
+        }
+
+        .report-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .report-table td.mono {
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        .report-table td.bold {
+            font-weight: 700;
+        }
+
+        .report-footer {
+            margin-top: auto;
+            border-top: 1.5px dashed #cbd5e1;
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .pdf-modal-actions {
+            padding: 16px 28px;
+            border-top: 1.5px solid #cbd5e1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            background: #f8fafc;
+        }
+
+        .pdf-btn {
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-family: var(--font-sans);
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+        }
+
+        .pdf-btn-secondary {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            color: #475569;
+        }
+
+        .pdf-btn-secondary:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .pdf-btn-primary {
+            background: linear-gradient(135deg, #10b981, #0d9488);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+        }
+
+        .pdf-btn-primary:hover {
+            background: linear-gradient(135deg, #059669, #0f766e);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* ==========================================
+           PRINT STYLES Override
+           ========================================== */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            
+            /* Hide the main dashboard completely */
+            aside.glass-sidebar, main, .glow-bg, .splash-screen, .pdf-modal-header, .pdf-modal-actions {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            
+            /* Expand overlay and remove alignment constraints */
+            .pdf-modal-overlay {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: transparent !important;
+                backdrop-filter: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+            }
+
+            .pdf-modal-card {
+                border: none !important;
+                box-shadow: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                overflow: visible !important;
+                background: transparent !important;
+            }
+
+            .pdf-modal-scroll-area {
+                padding: 0 !important;
+                background: transparent !important;
+                display: block !important;
+                overflow: visible !important;
+            }
+
+            .printable-report {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            .report-stat-box {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .status-pill-print {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .report-table th {
+                background: #e2e8f0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .report-table tbody tr:nth-child(even) {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Ensure all rows print correctly */
+            .report-table tbody tr {
+                page-break-inside: avoid !important;
+            }
+        }
+
+        /* ==========================================
+           LAYOUT: GLASS SIDEBAR
+           ========================================== */
+        aside.glass-sidebar {
+            width: var(--sidebar-width);
+            background: #ffffff;
+            border-right: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 32px 20px;
+            z-index: 10;
+            box-shadow: 4px 0 16px rgba(16, 28, 20, 0.04);
+        }
+
+        .sidebar-brand {
+            margin-bottom: 36px;
+        }
+
+        .brand-logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #10b981, #0284c7);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+        }
+
+        .brand-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .brand-subtitle {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-left: 2px;
+            font-weight: 700;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .menu-item:hover {
+            background-color: #f0fdf4;
+            color: var(--color-emerald);
+            border-color: #bbf7d0;
+            transform: translateX(4px);
+        }
+
+        .menu-item.active {
+            background-color: #dcfce7;
+            color: #166534;
+            border-color: #86efac;
+            font-weight: 800;
+        }
+
+        .menu-icon-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 800;
+        }
+
+        .badge-red {
+            background-color: rgba(239, 68, 68, 0.08);
+            color: var(--color-critical);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .badge-green {
+            background-color: rgba(34, 197, 94, 0.08);
+            color: var(--color-emerald);
+            border: 1px solid rgba(34, 197, 94, 0.15);
+        }
+
+        .badge-amber {
+            background-color: rgba(245, 158, 11, 0.08);
+            color: var(--color-warn);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .badge-gray {
+            background-color: rgba(0, 0, 0, 0.04);
+            color: var(--text-muted);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* Sidebar Footer Metrics */
+        .sidebar-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+
+        .footer-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .footer-metric span:last-child {
+            font-family: var(--font-mono);
+            color: var(--text-main);
+            font-weight: 800;
+        }
+
+        /* ==========================================
+           MAIN CONTENT SYSTEM (MULTI-VIEW TABS)
+           ========================================== */
+        main {
+            flex-grow: 1;
+            padding: 32px;
+            overflow-y: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-view {
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .dashboard-view.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* ==========================================
+           GLASS COMPONENT CARD SPECIFICATION
+           ========================================== */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 16px -6px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.02);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            border-color: #10b981;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15), 0 2px 8px rgba(0, 0, 0, 0.04);
+            transform: translateY(-2px);
+        }
+
+        /* ==========================================
+           ZONE 1: STATUS BANNER
+           ========================================== */
+        .status-banner {
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .status-banner.optimal {
+            background-color: #f0fdf4 !important;
+            border-color: #bbf7d0 !important;
+            border-left: 5px solid #16a34a !important;
+        }
+        .status-banner.warn {
+            background-color: #fffbeb !important;
+            border-color: #fef08a !important;
+            border-left: 5px solid #d97706 !important;
+        }
+        .status-banner.critical {
+            background-color: #fef2f2 !important;
+            border-color: #fecaca !important;
+            border-left: 5px solid #dc2626 !important;
+        }
+        .status-banner.offline {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            border-left: 5px solid #64748b !important;
+        }
+
+        .status-details {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        /* Pulsing status LED dot */
+        .led-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .led-dot.optimal {
+            background-color: var(--color-emerald);
+            animation: pulse-green 2s infinite;
+        }
+
+        .led-dot.warn {
+            background-color: var(--color-warn);
+            animation: pulse-amber 2s infinite;
+        }
+
+        .led-dot.critical {
+            background-color: var(--color-critical);
+            animation: pulse-red 2s infinite;
+        }
+
+        .led-dot.offline {
+            background-color: #64748b;
+            animation: pulse-offline 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(21, 128, 61, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0); }
+        }
+
+        @keyframes pulse-amber {
+            0% { box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(180, 83, 9, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(180, 83, 9, 0); }
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        @keyframes pulse-offline {
+            0% { box-shadow: 0 0 0 0 rgba(100, 116, 139, 0.5); }
+            70% { box-shadow: 0 0 0 10px rgba(100, 116, 139, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(100, 116, 139, 0); }
+        }
+
+        .status-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .status-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Threshold Legend */
+        .threshold-legend {
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+            color: var(--text-muted);
+            border-left: 1px solid var(--border-color);
+            padding-left: 20px;
+            font-weight: 700;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* ==========================================
+           ZONE 2: SENSOR CARDS GRID (DE-CONGESTED)
+           ========================================== */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .sensor-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 175px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Glowing Accent Borders */
+        .sensor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .card-temp::before { background-color: var(--color-cyan); }
+        .card-humidity::before { background-color: var(--color-cyan); }
+        .card-soil::before { background-color: var(--color-mint); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 12.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+        }
+
+        .trend-badge {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .trend-up { color: var(--color-emerald); }
+        .trend-down { color: var(--color-critical); }
+        .trend-stable { color: var(--text-muted); }
+
+        .card-body-metrics {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-grow: 1;
+            margin-bottom: 8px;
+        }
+
+        .readout-large {
+            font-family: var(--font-mono);
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -1.5px;
+        }
+
+        .card-temp .readout-large { color: var(--color-cyan); }
+        .card-humidity .readout-large { color: var(--color-cyan); }
+        .card-soil .readout-large { color: var(--color-mint); }
+
+        .readout-unit {
+            font-size: 20px;
+            font-weight: 700;
+            vertical-align: super;
+            margin-left: 2px;
+        }
+
+        /* Soil Circular Gauge Container */
+        .soil-gauge-container {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: #cbd5e1;
+            stroke-width: 7;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke: var(--color-mint);
+            stroke-width: 7;
+            stroke-linecap: round;
+            stroke-dasharray: 219.91;
+            stroke-dashoffset: 219.91;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .gauge-text {
+            position: absolute;
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--color-mint);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Pill Sub-Stats */
+        .sub-stats-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+
+        .stat-pill {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background-color: #f1f5f9;
+            border: 1.5px solid #cbd5e1;
+            color: var(--text-secondary);
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .sensor-card:hover .stat-pill {
+            background-color: #cbd5e1;
+            border-color: #94a3b8;
+        }
+
+        .stat-pill-label {
+            font-weight: 800;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            color: var(--text-muted);
+        }
+
+        .stat-pill-value {
+            font-weight: 800;
+            font-size: 12px;
+            color: var(--text-main);
+        }
+
+        /* Color-Coded Highly Legible Micro-Containers */
+        .card-temp .stat-pill {
+            background-color: #e0f2fe;
+            border-color: #7dd3fc;
+        }
+        .card-temp:hover .stat-pill {
+            background-color: #bae6fd;
+            border-color: #38bdf8;
+        }
+        .card-temp .stat-pill-label { color: #0369a1; }
+        .card-temp .stat-pill-value { color: #0c4a6e; }
+
+        .card-humidity .stat-pill {
+            background-color: #e6f4ea;
+            border-color: #a3cfbb;
+        }
+        .card-humidity:hover .stat-pill {
+            background-color: #dcfce7;
+            border-color: #86efac;
+        }
+        .card-humidity .stat-pill-label { color: #15803d; }
+        .card-humidity .stat-pill-value { color: #052e16; }
+
+        .card-soil .stat-pill {
+            background-color: #e6fcf5;
+            border-color: #96f2d7;
+        }
+        .card-soil:hover .stat-pill {
+            background-color: #ccfbf1;
+            border-color: #5eead4;
+        }
+        .card-soil .stat-pill-label { color: #0f766e; }
+        .card-soil .stat-pill-value { color: #134e4a; }
+        
+        .card-soil .stat-pill span {
+            color: #0f766e;
+            font-weight: 800;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+        }
+        
+        .card-soil .stat-pill strong {
+            color: #134e4a;
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        /* ==========================================
+           TWO-COLUMN OVERVIEW SECTION (METER METRICS)
+           ========================================== */
+        .overview-two-col {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        /* System Info / Progress Meter panel */
+        .metrics-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .metrics-header {
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 6px;
+        }
+
+        .metric-progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .metric-progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .metric-progress-name {
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        .metric-progress-value {
+            font-family: var(--font-mono);
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .progress-track {
+            height: 10px;
+            background-color: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            width: 100%;
+            border: 1.5px solid #cbd5e1;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Progress color variants - Modern Premium Solid Gradients */
+        .fill-temp { background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); }
+        .fill-humidity { background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); }
+        .fill-soil { background: linear-gradient(90deg, #0f766e 0%, #2dd4bf 100%); }
+        .fill-normal { background: linear-gradient(90deg, #15803d 0%, #4ade80 100%); }
+        .fill-warn { background: linear-gradient(90deg, #b45309 0%, #fbbf24 100%); }
+        .fill-critical { background: linear-gradient(90deg, #dc2626 0%, #f87171 100%); }
+
+        /* Quick Logs Mini widget inside Overview */
+        .mini-logs-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mini-logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 6px;
+        }
+
+        .mini-logs-link {
+            font-size: 11px;
+            color: var(--color-cyan);
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .mini-logs-link:hover {
+            text-decoration: underline;
+        }
+
+        .mini-logs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .mini-log-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11.5px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            font-family: var(--font-mono);
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .mini-log-item:hover {
+            border-color: #10b981;
+            background-color: #ffffff;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+            transform: translateX(2px);
+        }
+
+        .mini-log-status {
+            font-weight: 800;
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 10px;
+        }
+
+        /* ==========================================
+           TRENDS SHEET (VIEW 2: LARGE CHART FOCUS)
+           ========================================== */
+        .chart-card {
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            height: 520px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .chart-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Chart Navigation Tabs */
+        .chart-tabs {
+            display: flex;
+            gap: 6px;
+            background-color: #f1f5f9;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            border: none;
+            background: none;
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 8px 14px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .tab-btn.active {
+            background-color: #ffffff;
+            color: var(--text-main);
+            font-weight: 800;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-container {
+            position: relative;
+            flex-grow: 1;
+            height: 340px;
+            width: 100%;
+        }
+
+        .chart-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.92);
+            color: var(--text-muted);
+            font-size: 13.5px;
+            font-weight: 500;
+            text-align: center;
+            padding: 24px;
+            z-index: 5;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            border-radius: 12px;
+        }
+
+        .chart-placeholder.visible {
+            opacity: 1;
+        }
+
+        /* ==========================================
+           ZONE 4: LIVE MYSQL LOG TABLE (VIEW 3)
+           ========================================== */
+        .table-card {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #f8fafc;
+        }
+
+        .table-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .table-title {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .db-badge {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            background-color: #f1f5f9;
+            color: var(--text-secondary);
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            font-weight: 700;
+        }
+
+        .table-live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--color-emerald);
+            letter-spacing: 0.5px;
+        }
+
+        .table-live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--color-emerald);
+            animation: pulse-live 1s infinite alternate;
+        }
+
+        @keyframes pulse-live {
+            from { opacity: 0.35; }
+            to { opacity: 1; }
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 480px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        thead {
+            background-color: #f1f5f9;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            box-shadow: 0 1px 0 var(--border-color);
+        }
+
+        th {
+            font-weight: 800;
+            color: #0f172a;
+            padding: 14px 20px;
+            border-bottom: 2px solid #cbd5e1;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 14px 20px;
+            border-bottom: 1.5px solid #cbd5e1;
+            color: var(--text-main);
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        tbody tr:hover {
+            background-color: #e2e8f0;
+        }
+
+        /* Mono styling for numeric values */
+        .td-mono {
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        /* Colored row alerts */
+        .row-warn {
+            background-color: rgba(234, 179, 8, 0.03) !important;
+            border-left: 3px solid var(--color-warn);
+        }
+
+        .row-critical {
+            background-color: rgba(239, 68, 68, 0.03) !important;
+            border-left: 3px solid var(--color-critical);
+        }
+
+        /* Status cell styles */
+        .status-pill-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 800;
+            font-size: 10px;
+            padding: 2.5px 9px;
+            border-radius: 12px;
+        }
+
+        .cell-optimal {
+            background-color: rgba(51, 188, 101, 0.1);
+            color: var(--color-emerald);
+            border: 1px solid rgba(51, 188, 101, 0.15);
+        }
+
+        .cell-warn {
+            background-color: rgba(234, 179, 8, 0.1);
+            color: var(--color-warn);
+            border: 1px solid rgba(234, 179, 8, 0.15);
+        }
+
+        .cell-critical {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--color-critical);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        /* Flag text indicator dot */
+        .flag-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .flag-dot.ok { background-color: var(--color-emerald); }
+        .flag-dot.temp { background-color: var(--color-warn); }
+        .flag-dot.dry { background-color: var(--color-critical); }
+
+        /* Dialog alert triggers */
+        .reset-btn {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 700;
+            background-color: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: var(--color-critical);
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reset-btn:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.45);
+        }
+
+        /* ==========================================
+           DYNAMIC CHART LEGEND INFO-STRIP
+           ========================================== */
+        .chart-legend-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f8fafc;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s ease;
+        }
+
+        .legend-indicator-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .legend-color-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+            animation: pulse-dot 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        .legend-parameter-label {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            font-size: 11px;
+        }
+
+        .legend-optimal-range {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            border-left: 1px solid var(--border-color);
+            padding-left: 12px;
+            font-weight: 700;
+        }
+
+        .legend-indicator-stats {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .legend-stat-item {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-stat-label {
+            font-family: var(--font-sans);
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .legend-stat-value {
+            color: var(--text-main);
+            font-weight: 800;
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <!-- BACKGROUND NEON BLOB EFFECTS -->
+    <div class="glow-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <!-- WELCOME LANDING SCREEN -->
+    <!-- WELCOME LANDING SCREEN -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-glow"></div>
+        <div class="splash-container">
+            <!-- Left Pane: Brand, Description, and CTA Control -->
+            <div class="splash-left-pane">
+                <!-- Animated Botanical-Circuit SVG Logo -->
+                <div class="logo-animation-container">
+                    <svg class="splash-svg-logo" width="100" height="100" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="leafGrad" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#0284c7" />
+                            </linearGradient>
+                            <linearGradient id="glowGrad" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="rgba(16, 185, 129, 0.4)" />
+                                <stop offset="100%" stop-color="rgba(2, 132, 199, 0.4)" />
+                            </linearGradient>
+                            <filter id="logoGlow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="15" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                        </defs>
+                        <!-- Glowing background ring -->
+                        <circle cx="100" cy="100" r="85" stroke="url(#glowGrad)" stroke-width="2.5" stroke-dasharray="8 8" class="logo-ring-spin" />
+                        <circle cx="100" cy="100" r="70" fill="url(#glowGrad)" opacity="0.05" />
+
+                        <!-- Leaf shape outlined with digital sensor path -->
+                        <path d="M100 30 C50 70 40 130 100 170" stroke="url(#leafGrad)" stroke-width="6.5" stroke-linecap="round" />
+                        <path d="M100 30 C150 70 160 130 100 170" stroke="url(#leafGrad)" stroke-width="6.5" stroke-linecap="round" />
+                        <path d="M100 30 L100 170" stroke="url(#leafGrad)" stroke-width="4" stroke-linecap="round" />
+                        
+                        <!-- Circuit sensor nodes -->
+                        <path d="M100 70 L65 95" stroke="url(#leafGrad)" stroke-width="3" stroke-linecap="round" />
+                        <circle cx="65" cy="95" r="7.5" fill="#10b981" filter="url(#logoGlow)" />
+                        
+                        <path d="M100 110 L135 85" stroke="url(#leafGrad)" stroke-width="3" stroke-linecap="round" />
+                        <circle cx="135" cy="85" r="7.5" fill="#0284c7" filter="url(#logoGlow)" />
+                        
+                        <path d="M100 130 L65 145" stroke="url(#leafGrad)" stroke-width="3" stroke-linecap="round" />
+                        <circle cx="65" cy="145" r="7.5" fill="#10b981" filter="url(#logoGlow)" />
+
+                        <circle cx="100" cy="50" r="5" fill="#0284c7" />
+                        <circle cx="100" cy="100" r="6" fill="#10b981" />
+                        <circle cx="100" cy="150" r="5" fill="#0284c7" />
+                    </svg>
+                </div>
+                
+                <h1 class="splash-title">ROBOSENSE</h1>
+                <p class="splash-subtitle">IoT Environmental Intelligence System</p>
+                <p class="splash-description">Real-time microclimate intelligence, engineered for high-fidelity telemetry mapping. Experience automated smart crop diagnostics and sensor node status feeds.</p>
+                
+                <!-- Telemetry Ingestion Handshake Status -->
+                <div class="splash-handshake-panel">
+                    <span class="handshake-pulse-dot"></span>
+                    <div class="handshake-text-group">
+                        <span class="handshake-text">Serial interface: Listening on <strong>COM3</strong> at 9600 Baud</span>
+                        <span class="handshake-text">MySQL Target: <strong>sensor_readings</strong> (Active)</span>
+                    </div>
+                </div>
+
+                <div class="splash-action-area">
+                    <div class="splash-loader" id="splash-loader">
+                        <div class="splash-loader-bar"></div>
+                    </div>
+                    
+                    <button class="welcome-btn" id="welcome-btn" onclick="enterDashboard()">
+                        <span>Launch Real-time Control Center</span>
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Pane: Interactive Feature Showcase -->
+            <div class="splash-right-pane">
+                <div class="showcase-header">
+                    <span>SYSTEM CORE TELEMETRY TRACKS</span>
+                </div>
+                
+                <div class="showcase-card shadow-card-temp">
+                    <div class="showcase-icon icon-temp">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M8 6h8M8 18h8" />
+                        </svg>
+                    </div>
+                    <div class="showcase-card-content">
+                        <h4>Thermal Telemetry</h4>
+                        <p>High-precision heat-mapping, air cooling relays, and critical ambient index calculations.</p>
+                        <span class="showcase-badge badge-temp">18°C - 30°C Optimal</span>
+                    </div>
+                    <!-- Mock Sparkline Vector decoration -->
+                    <div class="showcase-card-visual">
+                        <svg width="60" height="30" viewBox="0 0 60 30" fill="none">
+                            <path d="M0 25 C10 15, 15 5, 25 15 C35 25, 45 10, 60 5" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" />
+                            <path d="M0 25 C10 15, 15 5, 25 15 C35 25, 45 10, 60 5 L60 30 L0 30 Z" fill="url(#tempVisualGrad)" opacity="0.06" />
+                            <circle cx="60" cy="5" r="3.5" fill="#0284c7" />
+                        </svg>
+                        <svg style="position:absolute; width:0; height:0;">
+                            <defs>
+                                <linearGradient id="tempVisualGrad" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#0284c7" />
+                                    <stop offset="100%" stop-color="#0284c7" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="showcase-card shadow-card-hum">
+                    <div class="showcase-icon icon-hum">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s9.75 12 9.75 12 9.75-6.615 9.75-12-4.365-9.75-9.75-9.75z" />
+                        </svg>
+                    </div>
+                    <div class="showcase-card-content">
+                        <h4>Atmospheric Saturation</h4>
+                        <p>Relative humidity tracking, misting nozzle controls, and water-vapor dew point estimations.</p>
+                        <span class="showcase-badge badge-hum">30% - 60% Optimal</span>
+                    </div>
+                    <!-- Mock Sparkline Vector decoration -->
+                    <div class="showcase-card-visual">
+                        <svg width="60" height="30" viewBox="0 0 60 30" fill="none">
+                            <path d="M0 10 C12 20, 20 25, 30 15 C40 5, 48 12, 60 22" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" />
+                            <path d="M0 10 C12 20, 20 25, 30 15 C40 5, 48 12, 60 22 L60 30 L0 30 Z" fill="url(#humVisualGrad)" opacity="0.06" />
+                            <circle cx="60" cy="22" r="3.5" fill="#15803d" />
+                        </svg>
+                        <svg style="position:absolute; width:0; height:0;">
+                            <defs>
+                                <linearGradient id="humVisualGrad" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#15803d" />
+                                    <stop offset="100%" stop-color="#15803d" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="showcase-card shadow-card-soil">
+                    <div class="showcase-icon icon-soil">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M5 12h14M19 12a7 7 0 01-7 7M5 12a7 7 0 017-7" />
+                        </svg>
+                    </div>
+                    <div class="showcase-card-content">
+                        <h4>Soil Hydration</h4>
+                        <p>Sub-surface capacitive moisture mapping and safety warning indicators.</p>
+                        <span class="showcase-badge badge-soil">20% - 80% Optimal</span>
+                    </div>
+                    <!-- Mock Sparkline Vector decoration -->
+                    <div class="showcase-card-visual">
+                        <svg width="60" height="30" viewBox="0 0 60 30" fill="none">
+                            <path d="M0 15 C10 22, 18 8, 32 18 C42 28, 48 5, 60 12" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" />
+                            <path d="M0 15 C10 22, 18 8, 32 18 C42 28, 48 5, 60 12 L60 30 L0 30 Z" fill="url(#soilVisualGrad)" opacity="0.06" />
+                            <circle cx="60" cy="12" r="3.5" fill="#0f766e" />
+                        </svg>
+                        <svg style="position:absolute; width:0; height:0;">
+                            <defs>
+                                <linearGradient id="soilVisualGrad" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#0f766e" />
+                                    <stop offset="100%" stop-color="#0f766e" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         SIDEBAR NAVIGATION PANEL
+         ========================================== -->
+    <aside class="glass-sidebar">
+        <div class="sidebar-top">
+            <div class="sidebar-brand">
+                <div class="brand-logo-container">
+                    <svg class="brand-icon-svg" width="28" height="28" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 2px;">
+                        <defs>
+                            <linearGradient id="brandLeafGrad" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#0284c7" />
+                            </linearGradient>
+                            <linearGradient id="brandGlowGrad" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="rgba(16, 185, 129, 0.4)" />
+                                <stop offset="100%" stop-color="rgba(2, 132, 199, 0.4)" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="85" stroke="url(#brandGlowGrad)" stroke-width="5" stroke-dasharray="16 16" />
+                        <path d="M100 30 C50 70 40 130 100 170" stroke="url(#brandLeafGrad)" stroke-width="10" stroke-linecap="round" />
+                        <path d="M100 30 C150 70 160 130 100 170" stroke="url(#brandLeafGrad)" stroke-width="10" stroke-linecap="round" />
+                        <path d="M100 30 L100 170" stroke="url(#brandLeafGrad)" stroke-width="6" stroke-linecap="round" />
+                        <circle cx="65" cy="95" r="10" fill="#10b981" />
+                        <circle cx="135" cy="85" r="10" fill="#0284c7" />
+                        <circle cx="65" cy="145" r="10" fill="#10b981" />
+                        <circle cx="100" cy="50" r="7" fill="#0284c7" />
+                        <circle cx="100" cy="100" r="8" fill="#10b981" />
+                        <circle cx="100" cy="150" r="7" fill="#0284c7" />
+                    </svg>
+                    <span class="brand-title">RoboSense Monitor</span>
+                </div>
+                <div class="brand-subtitle">IoT Environmental System</div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <a class="menu-item active" id="menu-overview" onclick="switchView('overview')">
+                    <span class="menu-icon-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                        Overview
+                    </span>
+                    <span class="badge badge-green" id="connection-badge">OK</span>
+                </a>
+                <a class="menu-item" id="menu-trends" onclick="switchView('trends')">
+                    <span class="menu-icon-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19c-1.67 0-3-1.33-3-3V7c0-1.67 1.33-3 3-3s3 1.33 3 3v9c0 1.67-1.33 3-3 3z"/><path d="M12 9h4M12 12h3M12 6h2"/></svg>
+                        Detailed Trends
+                    </span>
+                </a>
+                <a class="menu-item" id="menu-logs" onclick="switchView('logs')">
+                    <span class="menu-icon-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        Database Logs Grid
+                    </span>
+                    <span class="badge badge-red" id="sidebar-alert-badge">0</span>
+                </a>
+                <a class="menu-item" id="menu-export" onclick="exportCSV()">
+                    <span class="menu-icon-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Export CSV
+                    </span>
+                </a>
+                <a class="menu-item" id="menu-export-pdf" onclick="openPDFPreview()">
+                    <span class="menu-icon-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10V4m0 6l-3-3m3 3l3-3M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1"/></svg>
+                        Export PDF Report
+                    </span>
+                </a>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="footer-metric">
+                <span>System Mode</span>
+                <span id="system-mode-display" style="text-transform: capitalize;">Detecting...</span>
+            </div>
+            <div class="footer-metric">
+                <span>COM Port</span>
+                <span id="com-port-display">COM3</span>
+            </div>
+            <div class="footer-metric">
+                <span>Session Uptime</span>
+                <span id="uptime-display">00:00:00</span>
+            </div>
+            <div class="footer-metric">
+                <span>Total Logged</span>
+                <span id="logged-count-display">0</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ==========================================
+         MAIN INTERFACE CANVAS
+         ========================================== -->
+    <main>
+
+        <!-- ==========================================
+             VIEW 1: OVERVIEW SCREEN
+             ========================================== -->
+        <section id="view-overview" class="dashboard-view active">
+            
+            <!-- ZONE 1: STATUS BANNER -->
+            <div class="glass-card status-banner" id="banner-container">
+                <div class="status-details">
+                    <span class="led-dot optimal" id="banner-led"></span>
+                    <div>
+                        <h2 class="status-title" id="banner-title">Optimal System Status</h2>
+                        <p class="status-desc" id="banner-desc">All environmental sensors report parameters within safe working thresholds.</p>
+                    </div>
+                </div>
+                
+                <div class="threshold-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: var(--color-emerald);"></span>
+                        <span>OK</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: var(--color-warn);"></span>
+                        <span>Temp Warning (>30°C)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: var(--color-critical);"></span>
+                        <span>Soil Dry (<20%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ZONE 2: SENSOR CARDS GRID -->
+            <div class="sensor-grid">
+                
+                <!-- Temperature Card -->
+                <div class="glass-card sensor-card card-temp">
+                    <div class="card-header">
+                        <span class="card-title">Temperature</span>
+                        <span class="trend-badge trend-stable" id="temp-trend">──</span>
+                    </div>
+                    <div class="card-body-metrics">
+                        <span class="readout-large" id="temp-readout">--.-<span class="readout-unit">°C</span></span>
+                    </div>
+                    <div class="sub-stats-row">
+                        <div class="stat-pill">
+                            <span class="stat-pill-label">Min</span>
+                            <span class="stat-pill-value" id="temp-min">--.-°C</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="stat-pill-label">Avg</span>
+                            <span class="stat-pill-value" id="temp-avg">--.-°C</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="stat-pill-label">Max</span>
+                            <span class="stat-pill-value" id="temp-max">--.-°C</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Humidity Card -->
+                <div class="glass-card sensor-card card-humidity">
+                    <div class="card-header">
+                        <span class="card-title">Humidity</span>
+                        <span class="trend-badge trend-stable" id="hum-trend">──</span>
+                    </div>
+                    <div class="card-body-metrics">
+                        <span class="readout-large" id="hum-readout">--<span class="readout-unit">%</span></span>
+                    </div>
+                    <div class="sub-stats-row">
+                        <div class="stat-pill">
+                            <span class="stat-pill-label">Min</span>
+                            <span class="stat-pill-value" id="hum-min">--%</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="stat-pill-label">Avg</span>
+                            <span class="stat-pill-value" id="hum-avg">--%</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="stat-pill-label">Max</span>
+                            <span class="stat-pill-value" id="hum-max">--%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Soil Moisture Card (With SVG Ring) -->
+                <div class="glass-card sensor-card card-soil">
+                    <div class="card-header">
+                        <span class="card-title">Soil Moisture</span>
+                        <span class="trend-badge trend-stable" id="soil-trend">──</span>
+                    </div>
+                    <div class="card-body-metrics">
+                        <div class="soil-gauge-container">
+                            <svg class="gauge-svg" width="76" height="76" viewBox="0 0 80 80">
+                                <circle class="gauge-bg" cx="40" cy="40" r="35"></circle>
+                                <circle class="gauge-progress" id="soil-gauge-progress" cx="40" cy="40" r="35"></circle>
+                            </svg>
+                            <div class="gauge-text" id="soil-readout">--%</div>
+                        </div>
+                        <div style="flex-grow:1; padding-left:18px; display:flex; flex-direction:column; gap:6px;">
+                            <div class="stat-pill" style="flex-direction:row; justify-content:space-between; padding:4px 8px; font-size:10.5px;">
+                                <span>Min:</span> <strong id="soil-min">--%</strong>
+                            </div>
+                            <div class="stat-pill" style="flex-direction:row; justify-content:space-between; padding:4px 8px; font-size:10.5px;">
+                                <span>Avg:</span> <strong id="soil-avg">--%</strong>
+                            </div>
+                            <div class="stat-pill" style="flex-direction:row; justify-content:space-between; padding:4px 8px; font-size:10.5px;">
+                                <span>Max:</span> <strong id="soil-max">--%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ZONE 3: OVERVIEW METRIC METERS -->
+            <div class="overview-two-col">
+                
+                <!-- Performance meters panel -->
+                <div class="glass-card metrics-card">
+                    <h3 class="metrics-header">Analytics & Performance</h3>
+                    
+                    <!-- Meter 1: RSSI -->
+                    <div class="metric-progress-item">
+                        <div class="metric-progress-header">
+                            <span class="metric-progress-name">Bluetooth Signal</span>
+                            <span class="metric-progress-value" id="metric-rssi">-- dBm</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill fill-normal" id="fill-rssi" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Meter 2: Database Rows -->
+                    <div class="metric-progress-item">
+                        <div class="metric-progress-header">
+                            <span class="metric-progress-name">MySQL Table Rows</span>
+                            <span class="metric-progress-value" id="metric-rows">0</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill fill-humidity" id="fill-rows" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Meter 3: Alert Rates -->
+                    <div class="metric-progress-item">
+                        <div class="metric-progress-header">
+                            <span class="metric-progress-name">Logged Alerts</span>
+                            <span class="metric-progress-value" id="metric-alerts">0</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill fill-critical" id="fill-alerts" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Meter 4: Ingestion Frequency -->
+                    <div class="metric-progress-item">
+                        <div class="metric-progress-header">
+                            <span class="metric-progress-name">Data Sampling Rate</span>
+                            <span class="metric-progress-value" id="metric-freq">0.5 Hz</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill fill-temp" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mini Alerts list widget -->
+                <div class="glass-card mini-logs-card">
+                    <div class="mini-logs-header">
+                        <span>Recent Machine Events</span>
+                        <a class="mini-logs-link" onclick="switchView('logs')">View Grid</a>
+                    </div>
+                    <div class="mini-logs-list" id="mini-logs-container">
+                        <div style="text-align:center; padding: 24px; color: var(--text-muted); font-size: 11.5px; font-weight:500;">
+                            Awaiting dynamic serial ingestion stream...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ==========================================
+             VIEW 2: DETAIL TRENDS CHART (FULL WIDTH)
+             ========================================== -->
+        <section id="view-trends" class="dashboard-view">
+            
+            <!-- Full width line chart card -->
+            <div class="glass-card chart-card">
+                <div class="chart-header">
+                    <div class="chart-title-group">
+                        <h3 class="chart-title" id="chart-panel-title">Environmental Trends</h3>
+                        <span class="chart-subtitle">Historical visualization grid (last 30 samples)</span>
+                    </div>
+                    <div class="chart-tabs">
+                        <button class="tab-btn active" id="tab-temp" onclick="switchChartTab('temp')">Temperature</button>
+                        <button class="tab-btn" id="tab-humidity" onclick="switchChartTab('humidity')">Humidity</button>
+                        <button class="tab-btn" id="tab-soil" onclick="switchChartTab('soil')">Soil Moisture</button>
+                    </div>
+                </div>
+                
+                <!-- Dynamic Interactive Legend & Stats Strip -->
+                <div class="chart-legend-indicator" id="chart-legend-indicator">
+                    <div style="text-align:center; width:100%; color:var(--text-muted); font-size:11.5px; font-weight:500;">
+                        Awaiting dynamic serial ingestion stream...
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="trendsChart"></canvas>
+                    <div id="chart-no-data-placeholder" class="chart-placeholder">
+                        No historical data available. Environmental trends will plot here in real-time once telemetry begins.
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==========================================
+             VIEW 3: DATABASE GRID (FULL HEIGHT/WIDTH)
+             ========================================== -->
+        <section id="view-logs" class="dashboard-view">
+            
+            <!-- Live MySQL data logs card -->
+            <div class="glass-card table-card">
+                <div class="table-header">
+                    <div class="table-title-group">
+                        <h3 class="table-title">Database Records Logging Grid</h3>
+                        <span class="db-badge">Table: sensor_readings</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <button class="reset-btn" onclick="clearDatabase()">Clear DB History</button>
+                        <div class="table-live-indicator">
+                            <span class="table-live-dot"></span>
+                            <span>LIVE INGESTION</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table id="log-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Timestamp</th>
+                                <th>Temp (°C)</th>
+                                <th>Humidity (%)</th>
+                                <th>Soil Moisture (%)</th>
+                                <th>Status</th>
+                                <th>Alert Flag</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table-body">
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px; font-weight: 500;">
+                                    Establishing connection to Flask server and fetching initial logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ==========================================
+         FRONTEND LOGIC & CHART BINDINGS
+         ========================================== -->
+    <script>
+        // Global variables
+        let chartInstance = null;
+        let currentChartTab = 'temp'; // 'temp', 'humidity', 'soil'
+        
+        // Cache historical data locally for tab switching
+        let localHistoryCache = [];
+        
+        // Tracking metrics for deltas
+        let prevValues = {
+            temp: null,
+            humidity: null,
+            soil: null
+        };
+
+        // Switch View Navigation Tabs
+        function switchView(viewId) {
+            // Update active sidebar nav
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const menuEl = document.getElementById(`menu-${viewId}`);
+            if (menuEl) menuEl.classList.add('active');
+            
+            // Switch view container
+            document.querySelectorAll('.dashboard-view').forEach(view => {
+                view.classList.remove('active');
+            });
+            const targetView = document.getElementById(`view-${viewId}`);
+            if (targetView) {
+                targetView.classList.add('active');
+                
+                // Triggers Chart resizing to prevent visual glitches when viewport switches
+                if (viewId === 'trends') {
+                    setTimeout(() => {
+                        if (chartInstance) {
+                            chartInstance.resize();
+                            renderChartData();
+                        }
+                    }, 50);
+                }
+            }
+        }
+
+        // Initialize Chart.js
+        function initChart() {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            
+            // Premium Light Theme styling variables
+            Chart.defaults.color = '#1e293b';
+            Chart.defaults.font.family = 'Plus Jakarta Sans';
+            Chart.defaults.font.size = 11;
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.04)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#0284c7',
+                        pointBorderColor: 'rgba(255, 255, 255, 0.95)',
+                        pointBorderWidth: 1.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#1e293b',
+                                font: { family: 'Outfit', size: 10, weight: '600' },
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            grid: { color: 'rgba(15, 23, 42, 0.08)' },
+                            ticks: { 
+                                color: '#1e293b',
+                                font: { family: 'Outfit', size: 10, weight: '600' } 
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Switch Chart Tab
+        function switchChartTab(tabName) {
+            currentChartTab = tabName;
+            
+            // Update Tab navigation status
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // Update Title Subtext
+            const titleEl = document.getElementById('chart-panel-title');
+            if (tabName === 'temp') titleEl.textContent = 'Temperature Trend History';
+            else if (tabName === 'humidity') titleEl.textContent = 'Humidity Trend History';
+            else if (tabName === 'soil') titleEl.textContent = 'Soil Moisture Trend History';
+            
+            renderChartData();
+        }
+
+        // Render Chart.js with cached or new data
+        function renderChartData() {
+            if (!chartInstance) return;
+            
+            const placeholder = document.getElementById('chart-no-data-placeholder');
+            const legendIndicator = document.getElementById('chart-legend-indicator');
+            
+            if (localHistoryCache.length === 0) {
+                chartInstance.data.labels = [];
+                chartInstance.data.datasets[0].data = [];
+                chartInstance.update();
+                if (placeholder) placeholder.classList.add('visible');
+                
+                if (legendIndicator) {
+                    legendIndicator.innerHTML = `
+                        <div style="text-align:center; width:100%; color:var(--text-muted); font-size:11.5px; font-weight:500;">
+                            Awaiting dynamic serial ingestion stream...
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            if (placeholder) placeholder.classList.remove('visible');
+            
+            const timestamps = localHistoryCache.map(d => {
+                const parts = d.timestamp.split(' ');
+                return parts.length > 1 ? parts[1] : d.timestamp;
+            });
+            
+            let datasetLabel = '';
+            let datasetColor = '';
+            let datasetBg = '';
+            let sensorValues = [];
+            let unit = '';
+            let optimalRangeText = '';
+            let paramName = '';
+            
+            if (currentChartTab === 'temp') {
+                datasetLabel = 'Temperature (°C)';
+                datasetColor = '#0284c7'; // Rich Blue-Cyan
+                datasetBg = 'rgba(2, 132, 199, 0.04)';
+                sensorValues = localHistoryCache.map(d => parseFloat(d.temp_c));
+                unit = '°C';
+                optimalRangeText = 'Optimal: 18.0°C - 30.0°C';
+                paramName = 'Temperature';
+            } else if (currentChartTab === 'humidity') {
+                datasetLabel = 'Humidity (%)';
+                datasetColor = '#15803d'; // Rich Emerald Green
+                datasetBg = 'rgba(21, 128, 61, 0.04)';
+                sensorValues = localHistoryCache.map(d => parseFloat(d.humidity_pct));
+                unit = '%';
+                optimalRangeText = 'Optimal: 30% - 60%';
+                paramName = 'Humidity';
+            } else if (currentChartTab === 'soil') {
+                datasetLabel = 'Soil Moisture (%)';
+                datasetColor = '#0f766e'; // Deep Mint-Teal
+                datasetBg = 'rgba(15, 118, 110, 0.04)';
+                sensorValues = localHistoryCache.map(d => parseFloat(d.soil_pct));
+                unit = '%';
+                optimalRangeText = 'Optimal: 20% - 80%';
+                paramName = 'Soil Moisture';
+            }
+            
+            chartInstance.data.labels = timestamps;
+            chartInstance.data.datasets[0].label = datasetLabel;
+            chartInstance.data.datasets[0].borderColor = datasetColor;
+            chartInstance.data.datasets[0].backgroundColor = datasetBg;
+            chartInstance.data.datasets[0].pointBackgroundColor = datasetColor;
+            chartInstance.data.datasets[0].data = sensorValues;
+            
+            // Warning horizontal threshold for Temperature
+            if (currentChartTab === 'temp') {
+                chartInstance.options.plugins.annotation = {
+                    annotations: {
+                        line1: {
+                            type: 'line',
+                            yMin: 30,
+                            yMax: 30,
+                            borderColor: '#dc2626',
+                            borderWidth: 1.5,
+                            borderDash: [6, 6],
+                            label: {
+                                content: 'Warning Limit (30°C)',
+                                enabled: true,
+                                position: 'end',
+                                font: { family: 'Plus Jakarta Sans', size: 9, weight: 'bold' }
+                            }
+                        }
+                    }
+                };
+            } else {
+                if (chartInstance.options.plugins.annotation) {
+                    delete chartInstance.options.plugins.annotation;
+                }
+            }
+            
+            chartInstance.update();
+
+            // Compute statistics dynamically for the active parameter from the 30 active samples
+            if (legendIndicator && sensorValues.length > 0) {
+                const minVal = Math.min(...sensorValues);
+                const maxVal = Math.max(...sensorValues);
+                const sum = sensorValues.reduce((a, b) => a + b, 0);
+                const avgVal = sum / sensorValues.length;
+
+                legendIndicator.innerHTML = `
+                    <div class="legend-indicator-left">
+                        <span class="legend-color-dot" style="background-color: ${datasetColor};"></span>
+                        <span class="legend-parameter-label" style="color: ${datasetColor};">${paramName}</span>
+                        <span class="legend-optimal-range">${optimalRangeText}</span>
+                    </div>
+                    <div class="legend-indicator-stats">
+                        <div class="legend-stat-item">
+                            <span class="legend-stat-label">Min</span>
+                            <span class="legend-stat-value">${minVal.toFixed(1)}${unit}</span>
+                        </div>
+                        <div class="legend-stat-item" style="border-left: 1.5px solid var(--border-color); padding-left: 12px;">
+                            <span class="legend-stat-label">Avg</span>
+                            <span class="legend-stat-value">${avgVal.toFixed(1)}${unit}</span>
+                        </div>
+                        <div class="legend-stat-item" style="border-left: 1.5px solid var(--border-color); padding-left: 12px;">
+                            <span class="legend-stat-label">Max</span>
+                            <span class="legend-stat-value">${maxVal.toFixed(1)}${unit}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Circular Gauge Ring updates
+        function updateSoilGauge(percentage) {
+            const circle = document.getElementById('soil-gauge-progress');
+            if (!circle) return;
+            
+            const radius = circle.r.baseVal.value;
+            const circumference = 2 * Math.PI * radius; // 219.91
+            const pct = Math.max(0, Math.min(100, percentage));
+            const offset = circumference - (pct / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        // Format system uptime counter
+        function formatUptime(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        // Delta calculations
+        function renderDeltaTrend(elementId, currentValue, prevValue) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            if (prevValue === null) {
+                el.innerHTML = '──';
+                el.className = 'trend-badge trend-stable';
+                return;
+            }
+            
+            const diff = currentValue - prevValue;
+            if (Math.abs(diff) < 0.1) {
+                el.innerHTML = '──';
+                el.className = 'trend-badge trend-stable';
+            } else if (diff > 0) {
+                el.innerHTML = '▲';
+                el.className = 'trend-badge trend-up';
+            } else {
+                el.innerHTML = '▼';
+                el.className = 'trend-badge trend-down';
+            }
+        }
+
+        // Core data updating pipeline
+        function updateLatestMetrics(response) {
+            if (!response) return;
+            
+            // Connection modes UI binding
+            const systemMode = response.connection;
+            const comPort = response.com_port;
+            
+            const badgeEl = document.getElementById('connection-badge');
+            const modeEl = document.getElementById('system-mode-display');
+            const comEl = document.getElementById('com-port-display');
+            const uptimeEl = document.getElementById('uptime-display');
+            const totalLoggedEl = document.getElementById('logged-count-display');
+            
+            // Mode and Com ports
+            modeEl.textContent = systemMode.toLowerCase();
+            comEl.textContent = comPort;
+            uptimeEl.textContent = formatUptime(response.uptime_seconds);
+            totalLoggedEl.textContent = response.total_readings;
+            
+            // Bluetooth RSSI Signal details
+            const rssiEl = document.getElementById('metric-rssi');
+            const fillRssiEl = document.getElementById('fill-rssi');
+            
+            if (systemMode === 'CONNECTED') {
+                badgeEl.textContent = 'CONNECTED';
+                badgeEl.className = 'badge badge-green';
+                rssiEl.textContent = '-68 dBm';
+                fillRssiEl.style.width = '75%';
+            } else if (systemMode === 'SIMULATED') {
+                badgeEl.textContent = 'SIMULATED';
+                badgeEl.className = 'badge badge-amber';
+                rssiEl.textContent = '-85 dBm (Sim)';
+                fillRssiEl.style.width = '55%';
+            } else {
+                badgeEl.textContent = 'OFFLINE';
+                badgeEl.className = 'badge badge-gray';
+                rssiEl.textContent = 'Offline';
+                fillRssiEl.style.width = '0%';
+            }
+            
+            const data = response.data;
+            
+            // Dynamic Status Banner Layout (Zone 1)
+            const bannerCon = document.getElementById('banner-container');
+            const bannerLed = document.getElementById('banner-led');
+            const bannerTitle = document.getElementById('banner-title');
+            const bannerDesc = document.getElementById('banner-desc');
+            
+            if (!data) {
+                // Empty state or offline state
+                bannerLed.className = 'led-dot offline';
+                bannerTitle.textContent = 'System Awaiting Telemetry Ingestion';
+                bannerDesc.textContent = `Server is listening on ${comPort}. Please power on the Arduino Uno and activate Bluetooth connection to begin logging.`;
+                bannerCon.className = 'glass-card status-banner offline';
+                
+                // Clear latest readouts to indicate waiting/empty
+                document.getElementById('temp-readout').innerHTML = `--.-<span class="readout-unit">°C</span>`;
+                document.getElementById('hum-readout').innerHTML = `--<span class="readout-unit">%</span>`;
+                document.getElementById('soil-readout').textContent = `--%`;
+                
+                updateSoilGauge(0);
+                
+                // Stable trends
+                renderDeltaTrend('temp-trend', null, null);
+                renderDeltaTrend('hum-trend', null, null);
+                renderDeltaTrend('soil-trend', null, null);
+                
+                prevValues = { temp: null, humidity: null, soil: null };
+                return;
+            }
+            
+            // Readouts binding
+            const temp = parseFloat(data.temp_c);
+            const hum = parseFloat(data.humidity_pct);
+            const soil = parseFloat(data.soil_pct);
+            
+            document.getElementById('temp-readout').innerHTML = `${temp.toFixed(1)}<span class="readout-unit">°C</span>`;
+            document.getElementById('hum-readout').innerHTML = `${hum.toFixed(0)}<span class="readout-unit">%</span>`;
+            document.getElementById('soil-readout').textContent = `${soil.toFixed(0)}%`;
+            
+            updateSoilGauge(soil);
+            
+            // Delta Calculations
+            renderDeltaTrend('temp-trend', temp, prevValues.temp);
+            renderDeltaTrend('hum-trend', hum, prevValues.humidity);
+            renderDeltaTrend('soil-trend', soil, prevValues.soil);
+            
+            // Cache current as previous
+            prevValues.temp = temp;
+            prevValues.humidity = hum;
+            prevValues.soil = soil;
+            
+            if (data.status === 'CRITICAL') {
+                bannerLed.className = 'led-dot critical';
+                bannerTitle.textContent = 'Critical Status — Soil Moisture Critically Dry!';
+                bannerDesc.textContent = `Warning: Soil level has dropped below safety limits to ${soil.toFixed(1)}%. Irrigation activated.`;
+                bannerCon.className = 'glass-card status-banner critical';
+            } else if (data.status === 'WARN') {
+                bannerLed.className = 'led-dot warn';
+                bannerTitle.textContent = 'Warning Status — High Temperature Warning!';
+                bannerDesc.textContent = `Warning: Ambient heat levels rose above thresholds to ${temp.toFixed(1)}°C. Coolant fan triggered.`;
+                bannerCon.className = 'glass-card status-banner warn';
+            } else {
+                bannerLed.className = 'led-dot optimal';
+                bannerTitle.textContent = 'Optimal System Operations';
+                bannerDesc.textContent = 'All microclimatic parameters are sitting perfectly inside standard normal ranges.';
+                bannerCon.className = 'glass-card status-banner optimal';
+            }
+        }
+
+        // Fetch statistics API `/api/stats`
+        function fetchSystemStats() {
+            fetch('/api/stats')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS' && res.stats) {
+                        const s = res.stats;
+                        
+                        if (s.row_count === 0) {
+                            // Clear stat values
+                            document.getElementById('temp-min').textContent = `--.-°C`;
+                            document.getElementById('temp-avg').textContent = `--.-°C`;
+                            document.getElementById('temp-max').textContent = `--.-°C`;
+                            
+                            document.getElementById('hum-min').textContent = `--%`;
+                            document.getElementById('hum-avg').textContent = `--%`;
+                            document.getElementById('hum-max').textContent = `--%`;
+                            
+                            document.getElementById('soil-min').textContent = `--%`;
+                            document.getElementById('soil-avg').textContent = `--%`;
+                            document.getElementById('soil-max').textContent = `--%`;
+                            
+                            document.getElementById('metric-rows').textContent = '0';
+                            document.getElementById('fill-rows').style.width = '0%';
+                            return;
+                        }
+                        
+                        // Min/Avg/Max pills Temperature
+                        document.getElementById('temp-min').textContent = `${s.temp.min.toFixed(1)}°C`;
+                        document.getElementById('temp-avg').textContent = `${s.temp.avg.toFixed(1)}°C`;
+                        document.getElementById('temp-max').textContent = `${s.temp.max.toFixed(1)}°C`;
+                        
+                        // Min/Avg/Max pills Humidity
+                        document.getElementById('hum-min').textContent = `${s.humidity.min.toFixed(0)}%`;
+                        document.getElementById('hum-avg').textContent = `${s.humidity.avg.toFixed(0)}%`;
+                        document.getElementById('hum-max').textContent = `${s.humidity.max.toFixed(0)}%`;
+                        
+                        // Min/Avg/Max Soil
+                        document.getElementById('soil-min').textContent = `${s.soil.min.toFixed(0)}%`;
+                        document.getElementById('soil-avg').textContent = `${s.soil.avg.toFixed(0)}%`;
+                        document.getElementById('soil-max').textContent = `${s.soil.max.toFixed(0)}%`;
+                        
+                        // Sidebar & panel progress bars
+                        const rowCount = s.row_count;
+                        document.getElementById('metric-rows').textContent = rowCount;
+                        
+                        const rowsPct = Math.min(100, (rowCount / 200) * 100);
+                        document.getElementById('fill-rows').style.width = `${rowsPct}%`;
+                    }
+                })
+                .catch(err => console.error("Stats Fetch Error:", err));
+        }
+
+        // Fetch logs data table `/api/log`
+        function fetchSystemLogs() {
+            fetch('/api/log?limit=15')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS' && res.data) {
+                        const rows = res.data;
+                        
+                        // Render full main logs table
+                        const body = document.getElementById('log-table-body');
+                        body.innerHTML = '';
+                        
+                        // Render mini logs events list
+                        const miniLogsContainer = document.getElementById('mini-logs-container');
+                        miniLogsContainer.innerHTML = '';
+                        
+                        let currentAlerts = 0;
+
+                        if (rows.length === 0) {
+                            body.innerHTML = `
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px; font-weight: 500;">
+                                    No records found in database. Waiting for active serial transmission from Arduino Uno...
+                                </td>
+                            </tr>`;
+                            
+                            miniLogsContainer.innerHTML = `
+                            <div style="text-align:center; padding: 36px; color: var(--text-muted); font-size: 11.5px; font-weight:500;">
+                                Awaiting dynamic serial ingestion stream...
+                            </div>`;
+                            
+                            document.getElementById('sidebar-alert-badge').textContent = '0';
+                            document.getElementById('metric-alerts').textContent = '0';
+                            document.getElementById('fill-alerts').style.width = '0%';
+                            return;
+                        }
+
+                        // Display list size limits
+                        rows.forEach((r, idx) => {
+                            let statusClass = 'cell-optimal';
+                            let rowClass = '';
+                            let flagDotClass = 'ok';
+
+                            if (r.status === 'CRITICAL') {
+                                statusClass = 'cell-critical';
+                                rowClass = 'row-critical';
+                                flagDotClass = 'dry';
+                                currentAlerts++;
+                            } else if (r.status === 'WARN') {
+                                statusClass = 'cell-warn';
+                                rowClass = 'row-warn';
+                                flagDotClass = 'temp';
+                                currentAlerts++;
+                            }
+
+                            // Render table row
+                            const tr = document.createElement('tr');
+                            tr.className = rowClass;
+                            tr.innerHTML = `
+                                <td class="td-mono">${r.id}</td>
+                                <td class="td-mono">${r.timestamp}</td>
+                                <td class="td-mono">${parseFloat(r.temp_c).toFixed(1)} °C</td>
+                                <td class="td-mono">${parseFloat(r.humidity_pct).toFixed(0)} %</td>
+                                <td class="td-mono">${parseFloat(r.soil_pct).toFixed(0)} %</td>
+                                <td>
+                                    <span class="status-pill-cell ${statusClass}">${r.status}</span>
+                                </td>
+                                <td>
+                                    <span class="flag-dot ${flagDotClass}"></span>
+                                    <span class="td-mono" style="font-size: 11px; font-weight:800;">${r.flag}</span>
+                                </td>
+                            `;
+                            body.appendChild(tr);
+
+                            // Render dynamic mini event list (last 4 alerts/events)
+                            if (idx < 4) {
+                                let statusPillColor = 'rgba(51, 188, 101, 0.1)';
+                                let statusTextColor = 'var(--color-emerald)';
+                                if (r.status === 'CRITICAL') {
+                                    statusPillColor = 'rgba(239, 68, 68, 0.1)';
+                                    statusTextColor = 'var(--color-critical)';
+                                } else if (r.status === 'WARN') {
+                                    statusPillColor = 'rgba(234, 179, 8, 0.1)';
+                                    statusTextColor = 'var(--color-warn)';
+                                }
+
+                                const miniItem = document.createElement('div');
+                                miniItem.className = 'mini-log-item';
+                                miniItem.innerHTML = `
+                                    <span style="color: var(--text-secondary); font-size: 11px;">#${r.id} (${r.timestamp.split(' ')[1]})</span>
+                                    <span style="font-weight: 500;">T: ${parseFloat(r.temp_c).toFixed(0)}° | S: ${parseFloat(r.soil_pct).toFixed(0)}%</span>
+                                    <span class="mini-log-status" style="background-color: ${statusPillColor}; color: ${statusTextColor};">${r.status}</span>
+                                `;
+                                miniLogsContainer.appendChild(miniItem);
+                            }
+                        });
+                        
+                        // Update Alert Badges
+                        document.getElementById('sidebar-alert-badge').textContent = currentAlerts;
+                        document.getElementById('metric-alerts').textContent = currentAlerts;
+                        
+                        const alertsPct = Math.min(100, (currentAlerts / 15) * 100);
+                        document.getElementById('fill-alerts').style.width = `${alertsPct}%`;
+                    }
+                })
+                .catch(err => console.error("Logs Fetch Error:", err));
+        }
+
+        // Fetch chart history `/api/history`
+        function fetchChartHistory() {
+            fetch('/api/history?limit=30')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS' && res.data) {
+                        localHistoryCache = res.data;
+                        renderChartData();
+                    }
+                })
+                .catch(err => console.error("History Fetch Error:", err));
+        }
+
+        // Ingestion poller: `/api/latest`
+        function pollLatest() {
+            fetch('/api/latest')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS') {
+                        updateLatestMetrics(res);
+                    }
+                })
+                .catch(err => console.error("Poll Latest Error:", err));
+        }
+
+        // Export MySQL logs as standard CSV
+        function exportCSV() {
+            fetch('/api/history?limit=100')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS' && res.data && res.data.length > 0) {
+                        const data = res.data;
+                        let csvContent = "data:text/csv;charset=utf-8,";
+                        csvContent += "ID,Timestamp,Temperature (C),Humidity (%),Soil Moisture (%),Status,Alert Flag\n";
+                        
+                        data.forEach(r => {
+                            csvContent += `${r.id},${r.timestamp},${r.temp_c},${r.humidity_pct},${r.soil_pct},${r.status},${r.flag}\n`;
+                        });
+                        
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", `robosense_export_${new Date().toISOString().slice(0,10)}.csv`);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        alert("No records found in database to export.");
+                    }
+                })
+                .catch(err => console.error("CSV Export error:", err));
+        }
+
+        // Clear MySQL database via `/api/clear`
+        function clearDatabase() {
+            if (confirm("Are you sure you want to clear the entire sensor readings table in MySQL? This will reset all statistics and metrics.")) {
+                fetch('/api/clear', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.status === 'SUCCESS') {
+                            alert(res.message);
+                            fetchSystemStats();
+                            fetchSystemLogs();
+                            fetchChartHistory();
+                        } else {
+                            alert("Truncate action failed: " + res.message);
+                        }
+                    })
+                    .catch(err => console.error("Clear DB action error:", err));
+            }
+        }
+
+        // Enter primary dashboard from Welcome page
+        function enterDashboard() {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.classList.add('fade-out');
+            }
+        }
+
+        // Open PDF Print Preview Modal with database history
+        function openPDFPreview() {
+            // Fetch latest system details to get COM port and connection status dynamically
+            let comPort = "COM7";
+            let connStatus = "DISCONNECTED";
+            
+            fetch('/api/latest')
+                .then(res => res.json())
+                .then(latestRes => {
+                    if (latestRes.status === 'SUCCESS') {
+                        comPort = latestRes.com_port || "COM7";
+                        connStatus = latestRes.connection || "DISCONNECTED";
+                    }
+                })
+                .catch(err => console.error("Error fetching latest info for PDF:", err))
+                .finally(() => {
+                    document.getElementById('report-interface-str').innerHTML = `<strong>${comPort}</strong> (${connStatus})`;
+                });
+
+            // Retrieve history
+            fetch('/api/history?limit=100')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS' && res.data && res.data.length > 0) {
+                        const data = res.data;
+                        
+                        // Set Date
+                        document.getElementById('report-date-str').textContent = new Date().toLocaleString('en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+                        
+                        // Fill Summary Stats
+                        document.getElementById('report-stat-total').textContent = data.length;
+                        
+                        let totalTemp = 0, totalHum = 0, totalSoil = 0;
+                        data.forEach(r => {
+                            totalTemp += parseFloat(r.temp_c);
+                            totalHum += parseFloat(r.humidity_pct);
+                            totalSoil += parseFloat(r.soil_pct);
+                        });
+                        
+                        document.getElementById('report-stat-avg-temp').textContent = (totalTemp / data.length).toFixed(1) + " °C";
+                        document.getElementById('report-stat-avg-humidity').textContent = (totalHum / data.length).toFixed(1) + " %";
+                        document.getElementById('report-stat-avg-soil').textContent = (totalSoil / data.length).toFixed(1) + " %";
+                        
+                        // Populate Table
+                        const tbody = document.getElementById('pdf-report-table-body');
+                        tbody.innerHTML = '';
+                        
+                        data.forEach(r => {
+                            const tr = document.createElement('tr');
+                            
+                            // Format stats to exactly 1 decimal place cleanly
+                            const tempVal = parseFloat(r.temp_c).toFixed(1);
+                            const humVal = parseFloat(r.humidity_pct).toFixed(1);
+                            const soilVal = parseFloat(r.soil_pct).toFixed(1);
+                            
+                            // Format status nicely with high-contrast colorful pill badges
+                            let statusColor = '#0f172a';
+                            let statusBg = '#f1f5f9';
+                            let statusBorder = '#cbd5e1';
+                            
+                            if (r.status === 'OPTIMAL') {
+                                statusColor = '#166534';
+                                statusBg = '#e6f4ea';
+                                statusBorder = '#a3cfbb';
+                            } else if (r.status === 'WARNING' || r.status === 'WARN') {
+                                statusColor = '#92400e';
+                                statusBg = '#fffbeb';
+                                statusBorder = '#fef08a';
+                            } else if (r.status === 'CRITICAL') {
+                                statusColor = '#991b1b';
+                                statusBg = '#fef2f2';
+                                statusBorder = '#fecaca';
+                            }
+                            
+                            // Format alert flag nicely with color badges
+                            let flagText = '-';
+                            let flagColor = '#64748b';
+                            let flagBg = '#f8fafc';
+                            let flagBorder = '#e2e8f0';
+                            
+                            if (r.flag && r.flag !== 'NONE' && r.flag !== 'OK') {
+                                flagText = r.flag;
+                                if (r.flag === 'TEMP') {
+                                    flagColor = '#0369a1';
+                                    flagBg = '#e0f2fe';
+                                    flagBorder = '#7dd3fc';
+                                } else if (r.flag === 'DRY') {
+                                    flagColor = '#c2410c';
+                                    flagBg = '#fff7ed';
+                                    flagBorder = '#ffedd5';
+                                } else {
+                                    flagColor = '#991b1b';
+                                    flagBg = '#fef2f2';
+                                    flagBorder = '#fecaca';
+                                }
+                            }
+                            
+                            tr.innerHTML = `
+                                <td class="mono bold" style="color: #64748b; text-align: left;">#${r.id}</td>
+                                <td class="mono" style="text-align: left;">${r.timestamp}</td>
+                                <td class="mono bold" style="text-align: center;">${tempVal} °C</td>
+                                <td class="mono bold" style="text-align: center;">${humVal}%</td>
+                                <td class="mono bold" style="text-align: center;">${soilVal}%</td>
+                                <td style="text-align: center;">
+                                    <span class="status-pill-print" style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; background-color: ${statusBg}; color: ${statusColor}; border: 1.5px solid ${statusBorder};">
+                                        ${r.status}
+                                    </span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <span class="status-pill-print" style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; background-color: ${flagBg}; color: ${flagColor}; border: 1.5px solid ${flagBorder};">
+                                        ${flagText}
+                                    </span>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                        
+                        // Show modal
+                        document.getElementById('pdf-preview-modal').style.display = 'flex';
+                    } else {
+                        alert("No records found in database to export.");
+                    }
+                })
+                .catch(err => {
+                    console.error("PDF preview generation error:", err);
+                    alert("Failed to retrieve telemetry logs for preview.");
+                });
+        }
+        
+        // Close Modal
+        function closePDFPreview() {
+            document.getElementById('pdf-preview-modal').style.display = 'none';
+        }
+        
+        // Print Report
+        function printPDFReport() {
+            window.print();
+        }
+
+        // Setup and kickoff
+        window.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            
+            // Transition loader to interactive proceed button after progress completes (2s)
+            setTimeout(() => {
+                const loader = document.getElementById('splash-loader');
+                const btn = document.getElementById('welcome-btn');
+                if (loader) loader.classList.add('fade-out-loader');
+                if (btn) btn.classList.add('visible');
+            }, 2000);
+
+            // Initial loads
+            pollLatest();
+            fetchSystemStats();
+            fetchSystemLogs();
+            fetchChartHistory();
+            
+            // Recurrent Pollers
+            setInterval(pollLatest, 2000);        // Value cards and banner (2s)
+            setInterval(fetchSystemStats, 4000);  // Min/Max/Avg (4s)
+            setInterval(fetchSystemLogs, 4000);   // Live Table updates (4s)
+            setInterval(fetchChartHistory, 6000); // Chart updates (6s)
+        });
+    </script>
+
+    <!-- PDF PREVIEW & EXPORT MODAL -->
+    <div id="pdf-preview-modal" class="pdf-modal-overlay" style="display: none;">
+        <div class="pdf-modal-card">
+            <div class="pdf-modal-header">
+                <h3>Report Print & Export Preview</h3>
+                <button class="pdf-close-icon" onclick="closePDFPreview()">&times;</button>
+            </div>
+            
+            <div class="pdf-modal-scroll-area">
+                <!-- Printable Content Area -->
+                <div id="pdf-preview-content" class="printable-report">
+                    <div class="report-header">
+                        <div class="report-header-left" style="text-align: left;">
+                            <div class="report-brand">
+                                <!-- Glowing mini brand SVG logo -->
+                                <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="pdfReportLeafGrad" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+                                            <stop offset="0%" stop-color="#10b981" />
+                                            <stop offset="100%" stop-color="#0284c7" />
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="100" cy="100" r="85" stroke="#10b981" stroke-width="8" stroke-dasharray="16 16" />
+                                    <path d="M100 30 C50 70 40 130 100 170" stroke="url(#pdfReportLeafGrad)" stroke-width="12" stroke-linecap="round" />
+                                    <path d="M100 30 C150 70 160 130 100 170" stroke="url(#pdfReportLeafGrad)" stroke-width="12" stroke-linecap="round" />
+                                    <path d="M100 30 L100 170" stroke="url(#pdfReportLeafGrad)" stroke-width="8" stroke-linecap="round" />
+                                </svg>
+                                <h2>RoboSense Monitor</h2>
+                            </div>
+                            <p class="report-subtitle">IoT Environmental Intelligence System Report</p>
+                        </div>
+                        <div class="report-header-right">
+                            <div class="report-meta-item"><strong>Date:</strong> <span id="report-date-str">--</span></div>
+                            <div class="report-meta-item"><strong>Interface:</strong> <span id="report-interface-str">COM3 (9600 Baud)</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="report-divider"></div>
+                    
+                    <div class="report-section-title">Telemetry Analytics Summary</div>
+                    <div class="report-stats-grid">
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Total Readings</div>
+                            <div class="report-stat-value" id="report-stat-total">0</div>
+                        </div>
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Temperature</div>
+                            <div class="report-stat-value" id="report-stat-avg-temp">0.0 °C</div>
+                        </div>
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Humidity</div>
+                            <div class="report-stat-value" id="report-stat-avg-humidity">0.0 %</div>
+                        </div>
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Soil Moisture</div>
+                            <div class="report-stat-value" id="report-stat-avg-soil">0.0 %</div>
+                        </div>
+                    </div>
+                    
+                    <div class="report-section-title">Raw Telemetry Records</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px; text-align: left;">ID</th>
+                                <th style="width: 170px; text-align: left;">Timestamp</th>
+                                <th style="text-align: center; width: 100px;">Temp (°C)</th>
+                                <th style="text-align: center; width: 110px;">Humidity (%)</th>
+                                <th style="text-align: center; width: 140px;">Soil Moisture (%)</th>
+                                <th style="text-align: center; width: 120px;">Node Status</th>
+                                <th style="text-align: center; width: 110px;">Alert Flag</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pdf-report-table-body">
+                            <!-- Populated dynamically via Javascript -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="report-footer">
+                        <p>© 2026 RoboSense Environmental Intelligence System • Confidential Report</p>
+                        <p>Generated dynamically from local telemetry logs stored in MySQL.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pdf-modal-actions">
+                <button class="pdf-btn pdf-btn-secondary" onclick="closePDFPreview()">Cancel & Close</button>
+                <button class="pdf-btn pdf-btn-primary" onclick="printPDFReport()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right: 6px;">
+                        <path d="M12 10V4m0 6l-3-3m3 3l3-3M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1"/>
+                    </svg>
+                    Print / Save PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
