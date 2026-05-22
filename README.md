@@ -57,6 +57,16 @@ Soil Moisture Sensor + DHT11 (Temp/Humidity) + RGB LED
 Ensure MySQL is active in your XAMPP Control Panel (or default local instance on Port `3306`).
 * *Note: The Python backend automatically handles creating the database `robosense_db` and its table `sensor_readings` on startup. You do not need to create them manually!*
 
+### Database Compliance Note
+The project guideline references SQLite database or CSV file storage. This implementation uses **MySQL** as the primary persistent database layer. CSV export is available for reporting, but runtime sensor readings are stored in MySQL.
+
+A reviewable schema artifact is included at:
+```text
+database/schema.sql
+```
+
+You may import this file manually through phpMyAdmin or the MySQL CLI, or let `python app.py` create the database and table automatically.
+
 ### 2. Configure Settings (Optional)
 Open [app.py](file:///D:/xampp_latest/htdocs/IoT/app.py) in your editor and adjust configuration constants at the top:
 ```python
@@ -105,8 +115,11 @@ git push -u origin staging
 
 ---
 
-## Intelligent Simulator Fallback Mode
-If you do not have physical Arduino hardware connected or the designated `COM3` port is not currently connected to your computer:
-* **The system will automatically switch to Simulated Fallback Mode.**
-* It will generate high-fidelity, drifting climatic sensor logs to mock realistic weather/moisture progressions.
-* These simulated records are automatically inserted into MySQL every 2 seconds, allowing you to fully interact with charts, statistics, logs, and delta trends out-of-the-box!
+## Hardware-Only Telemetry Mode
+This system is configured to record sensor readings only from the physical Arduino and HC-05 Bluetooth connection on `COM7`.
+
+If no hardware is connected:
+* The system displays an offline connection state.
+* Live telemetry cards show empty readings.
+* No new sensor records are inserted into MySQL.
+* Existing historical database logs remain available for review.

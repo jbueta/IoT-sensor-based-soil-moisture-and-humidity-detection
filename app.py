@@ -1,7 +1,6 @@
 import os
 import re
 import time
-import random
 import threading
 import mysql.connector
 from mysql.connector import errorcode
@@ -17,12 +16,6 @@ DB_HOST = "localhost"
 DB_USER = "root"
 DB_PASS = ""
 DB_NAME = "robosense_db"
-
-# Set to True if you want to generate high-fidelity simulated values inside MySQL 
-# in case real physical hardware is not connected. Set to False for real production.
-SIMULATE_DATA = False
-
-
 
 # ==========================================
 # FLASK & STATE INITIALIZATION
@@ -40,17 +33,19 @@ def add_header(response):
 
 # Global tracking variables
 system_status = {
-    "connection": "DISCONNECTED",  # CONNECTED or SIMULATED or DISCONNECTED
+    "connection": "DISCONNECTED",  # CONNECTED or DISCONNECTED
     "com_port": COM_PORT,
     "last_reading": None,
     "uptime_start": time.time(),
     "total_readings_logged": 0
 }
 
+in_memory_readings = []
+
 # Thread lock for thread-safe database operations and state updates
 db_lock = threading.Lock()
 
-# Try to import serial (pyserial). If not installed, we'll log and use simulated.
+# Try to import serial (pyserial). If not installed, the system remains offline.
 try:
     import serial
     SERIAL_AVAILABLE = True
@@ -84,7 +79,7 @@ def bootstrap_database():
     """Bootstraps the MySQL server: creates the database and the sensor_readings table."""
     conn = get_db_connection(include_db=False)
     if not conn:
-        print("[DB Bootstrap] Could not connect to MySQL server. Ensure XAMPP MySQL is active. Booting in memory-simulation mode.")
+        print("[DB Bootstrap] Could not connect to MySQL server. Ensure XAMPP MySQL is active.")
         return False
 
     cursor = conn.cursor()
@@ -138,13 +133,33 @@ def bootstrap_database():
 # DATA INGESTION & PARSING
 # ==========================================
 def log_reading_to_db(temp, hum, soil, status, flag):
-    """Inserts a sensor reading row into MySQL with thread-safety."""
-    global system_status
+    """Inserts a sensor reading row into MySQL with thread-safety, falling back to in-memory log."""
+    global system_status, in_memory_readings
+    
+    timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    
     with db_lock:
+        system_status["total_readings_logged"] += 1
+        new_reading = {
+            "id": system_status["total_readings_logged"],
+            "temp_c": temp,
+            "humidity_pct": hum,
+            "soil_pct": soil,
+            "status": status,
+            "flag": flag,
+            "timestamp": timestamp_str
+        }
+        system_status["last_reading"] = new_reading
+        
+        # Log to in-memory list
+        in_memory_readings.append(new_reading)
+        if len(in_memory_readings) > 100:
+            in_memory_readings.pop(0)
+            
         conn = get_db_connection()
         if not conn:
-            print("[Database Log Fail] Database not reachable. Skipping write.")
-            return False
+            print(f"[Database Log Fail] Database not reachable. Saved reading #{new_reading['id']} in-memory.")
+            return True
         
         cursor = conn.cursor()
         try:
@@ -154,20 +169,10 @@ def log_reading_to_db(temp, hum, soil, status, flag):
             """
             cursor.execute(query, (temp, hum, soil, status, flag))
             conn.commit()
-            
-            system_status["total_readings_logged"] += 1
-            system_status["last_reading"] = {
-                "temp_c": temp,
-                "humidity_pct": hum,
-                "soil_pct": soil,
-                "status": status,
-                "flag": flag,
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-            }
             return True
         except mysql.connector.Error as err:
-            print(f"[Database Insert Error] {err}")
-            return False
+            print(f"[Database Insert Error] {err}. Saved reading #{new_reading['id']} in-memory.")
+            return True
         finally:
             cursor.close()
             conn.close()
@@ -208,7 +213,7 @@ def parse_arduino_line(line):
 # BACKGROUND DATA INGESTION WORKER
 # ==========================================
 def serial_reader_thread():
-    """Background thread that reads serial data from COM port or runs high-fidelity simulator."""
+    """Background thread that reads serial data from the configured COM port."""
     global system_status
     
     print("[Serial Thread] Background serial processor started.")
@@ -226,21 +231,8 @@ def serial_reader_thread():
             ser = None
             
     if not ser:
-        if SIMULATE_DATA:
-            system_status["connection"] = "SIMULATED"
-            print("[Serial Thread] Running in high-fidelity SIMULATED mode. Generating realistic sensor values.")
-        else:
-            system_status["connection"] = "DISCONNECTED"
-            print("[Serial Thread] Running in passive/empty mode. Waiting for hardware COM port connection...")
-
-    # Variables for state drift in simulator mode to make data look highly authentic
-    sim_temp = 25.5
-    sim_hum = 60.0
-    sim_soil = 45.0
-    
-    # Simple drift states to occasionally trigger warnings/critical alert
-    drift_cycle = 0
-    cycle_timer = 0
+        system_status["connection"] = "DISCONNECTED"
+        print("[Serial Thread] Running in offline mode. Waiting for hardware COM port connection...")
 
     while True:
         try:
@@ -257,59 +249,8 @@ def serial_reader_thread():
                             log_reading_to_db(temp, hum, soil, status, flag)
                 time.sleep(0.1)
                 
-            elif system_status["connection"] == "SIMULATED" and SIMULATE_DATA:
-                # ==========================================
-                # DYNAMIC HIGH-FIDELITY SIMULATOR
-                # ==========================================
-                cycle_timer += 1
-                
-                # Every 25 cycles (50s), switch drift state to show all dashboard conditions
-                if cycle_timer >= 25:
-                    drift_cycle = (drift_cycle + 1) % 3
-                    cycle_timer = 0
-                    print(f"[Simulator] Cycle shift! Moving to simulation phase: {drift_cycle}")
-                
-                # Apply drifts based on cycle phase
-                if drift_cycle == 0:
-                    # Normal drift: values hover around optimal
-                    sim_temp += random.uniform(-0.3, 0.3)
-                    sim_temp = max(24.0, min(29.0, sim_temp)) # Keep below 30
-                    sim_hum += random.uniform(-0.5, 0.5)
-                    sim_hum = max(50.0, min(75.0, sim_hum))
-                    sim_soil += random.uniform(-1.0, 1.0)
-                    sim_soil = max(35.0, min(75.0, sim_soil)) # Keep above 20
-                elif drift_cycle == 1:
-                    # Heatwave phase: temperature rises above 30C (WARNING TEMP)
-                    sim_temp += random.uniform(0.1, 0.5)
-                    sim_temp = min(33.5, sim_temp)
-                    sim_hum += random.uniform(-0.6, 0.2)
-                    sim_hum = max(40.0, sim_hum)
-                    sim_soil += random.uniform(-0.8, 0.2)
-                    sim_soil = max(25.0, sim_soil)
-                elif drift_cycle == 2:
-                    # Drought phase: soil moisture drops below 20% (CRITICAL DRY)
-                    sim_temp += random.uniform(-0.4, 0.2)
-                    sim_temp = max(23.0, sim_temp)
-                    sim_hum += random.uniform(-0.8, 0.4)
-                    sim_hum = max(35.0, sim_hum)
-                    sim_soil -= random.uniform(0.5, 2.5) # Fast drop
-                    sim_soil = max(8.0, sim_soil) # Cap at dry level
-                    
-                # Format exactly as Arduino Serial string for terminal feedback
-                sim_line = f"TEMP={sim_temp:.1f};HUM={sim_hum:.0f};SOIL={sim_soil:.0f}"
-                print(f"[Simulated Serial Output] {sim_line}")
-                
-                # Parse and log just like real serial
-                parsed = parse_arduino_line(sim_line)
-                if parsed:
-                    temp, hum, soil = parsed
-                    status, flag = calculate_status_and_flag(temp, hum, soil)
-                    log_reading_to_db(temp, hum, soil, status, flag)
-                
-                time.sleep(2.0)
-                
             else:
-                # Passive disconnected / empty mode: Try to open the COM Port periodically
+                # Offline mode: keep trying to open the hardware COM port periodically.
                 if SERIAL_AVAILABLE:
                     try:
                         ser = serial.Serial(COM_PORT, BAUD_RATE, timeout=2)
@@ -329,11 +270,7 @@ def serial_reader_thread():
                 except:
                     pass
             ser = None
-            
-            if SIMULATE_DATA:
-                system_status["connection"] = "SIMULATED"
-            else:
-                system_status["connection"] = "DISCONNECTED"
+            system_status["connection"] = "DISCONNECTED"
             time.sleep(3.0)
 
 
@@ -359,6 +296,9 @@ def get_latest():
         "data": None
     }
     
+    if system_status["connection"] != "CONNECTED":
+        return jsonify(response_data)
+
     if system_status["last_reading"]:
         response_data["data"] = system_status["last_reading"]
         return jsonify(response_data)
@@ -419,6 +359,9 @@ def get_history():
         finally:
             cursor.close()
             conn.close()
+    else:
+        # Fallback to in-memory list (which is already in oldest-to-newest append order)
+        data_points = in_memory_readings[-limit:]
             
     return jsonify({
         "status": "SUCCESS",
@@ -474,6 +417,28 @@ def get_stats():
         finally:
             cursor.close()
             conn.close()
+    else:
+        # Fallback to in-memory stats
+        if in_memory_readings:
+            temps = [r["temp_c"] for r in in_memory_readings]
+            hums = [r["humidity_pct"] for r in in_memory_readings]
+            soils = [r["soil_pct"] for r in in_memory_readings]
+            stats_data["row_count"] = len(in_memory_readings)
+            stats_data["temp"] = {
+                "min": round(min(temps), 1),
+                "max": round(max(temps), 1),
+                "avg": round(sum(temps) / len(temps), 1)
+            }
+            stats_data["humidity"] = {
+                "min": round(min(hums), 1),
+                "max": round(max(hums), 1),
+                "avg": round(sum(hums) / len(hums), 1)
+            }
+            stats_data["soil"] = {
+                "min": round(min(soils), 1),
+                "max": round(max(soils), 1),
+                "avg": round(sum(soils) / len(soils), 1)
+            }
             
     return jsonify({
         "status": "SUCCESS",
@@ -505,6 +470,9 @@ def get_log():
         finally:
             cursor.close()
             conn.close()
+    else:
+        # Fallback to in-memory list (reverse chronological order)
+        logs = list(reversed(in_memory_readings))[:limit]
             
     return jsonify({
         "status": "SUCCESS",
@@ -515,18 +483,20 @@ def get_log():
 @app.route('/api/clear', methods=['POST'])
 def clear_logs():
     """Utility endpoint to truncate logs and reset metrics for testing."""
-    global system_status
+    global system_status, in_memory_readings
     with db_lock:
+        in_memory_readings = []
+        system_status["total_readings_logged"] = 0
+        system_status["last_reading"] = None
+        
         conn = get_db_connection()
         if not conn:
-            return jsonify({"status": "ERROR", "message": "Database not reachable"}), 500
+            return jsonify({"status": "SUCCESS", "message": "In-memory database successfully cleared"})
         
         cursor = conn.cursor()
         try:
             cursor.execute("TRUNCATE TABLE sensor_readings")
             conn.commit()
-            system_status["total_readings_logged"] = 0
-            system_status["last_reading"] = None
             return jsonify({"status": "SUCCESS", "message": "Database successfully cleared"})
         except Exception as e:
             return jsonify({"status": "ERROR", "message": str(e)}), 500
