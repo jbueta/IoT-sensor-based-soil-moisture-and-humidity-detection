@@ -255,6 +255,17 @@
             flex-shrink: 0;
         }
 
+        .handshake-pulse-dot.offline {
+            background-color: #64748b;
+            box-shadow: none;
+            animation: none;
+        }
+
+        .handshake-pulse-dot.online {
+            background-color: var(--color-emerald);
+            animation: pulse-green-glow 2s infinite;
+        }
+
         @keyframes pulse-green-glow {
             0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.6); }
             70% { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
@@ -2756,11 +2767,11 @@
                 <p class="splash-description">Real-time microclimate intelligence, engineered for high-fidelity telemetry mapping. Experience automated smart crop diagnostics and sensor node status feeds.</p>
                 
                 <!-- Telemetry Ingestion Handshake Status -->
-                <div class="splash-handshake-panel">
-                    <span class="handshake-pulse-dot"></span>
+                <div class="splash-handshake-panel" id="splash-handshake-panel">
+                    <span class="handshake-pulse-dot offline" id="splash-connection-dot"></span>
                     <div class="handshake-text-group">
-                        <span class="handshake-text">Serial interface: Listening on <strong>COM3</strong> at 9600 Baud</span>
-                        <span class="handshake-text">MySQL Target: <strong>sensor_readings</strong> (Active)</span>
+                        <span class="handshake-text" id="splash-serial-status"><strong>System Offline. No Connections Detected.</strong></span>
+                        <span class="handshake-text" id="splash-db-status">MySQL Target: <strong>sensor_readings</strong> (Standby)</span>
                     </div>
                 </div>
 
@@ -2951,7 +2962,7 @@
             </div>
             <div class="footer-metric">
                 <span>COM Port</span>
-                <span id="com-port-display">COM3</span>
+                <span id="com-port-display">COM7</span>
             </div>
             <div class="footer-metric">
                 <span>Session Uptime</span>
@@ -3820,6 +3831,9 @@
             const comEl = document.getElementById('com-port-display');
             const uptimeEl = document.getElementById('uptime-display');
             const totalLoggedEl = document.getElementById('logged-count-display');
+            const splashDotEl = document.getElementById('splash-connection-dot');
+            const splashSerialEl = document.getElementById('splash-serial-status');
+            const splashDbEl = document.getElementById('splash-db-status');
             
             // Mode and Com ports
             modeEl.textContent = systemMode.toLowerCase();
@@ -3836,16 +3850,17 @@
                 badgeEl.className = 'badge badge-green';
                 rssiEl.textContent = '-68 dBm';
                 fillRssiEl.style.width = '75%';
-            } else if (systemMode === 'SIMULATED') {
-                badgeEl.textContent = 'SIMULATED';
-                badgeEl.className = 'badge badge-amber';
-                rssiEl.textContent = '-85 dBm (Sim)';
-                fillRssiEl.style.width = '55%';
+                if (splashDotEl) splashDotEl.className = 'handshake-pulse-dot online';
+                if (splashSerialEl) splashSerialEl.innerHTML = `Connected on <strong>${comPort}</strong>`;
+                if (splashDbEl) splashDbEl.innerHTML = `MySQL Target: <strong>sensor_readings</strong> (Active)`;
             } else {
                 badgeEl.textContent = 'OFFLINE';
                 badgeEl.className = 'badge badge-gray';
                 rssiEl.textContent = 'Offline';
                 fillRssiEl.style.width = '0%';
+                if (splashDotEl) splashDotEl.className = 'handshake-pulse-dot offline';
+                if (splashSerialEl) splashSerialEl.innerHTML = `<strong>System Offline. No Connections Detected.</strong>`;
+                if (splashDbEl) splashDbEl.innerHTML = `MySQL Target: <strong>sensor_readings</strong> (Standby)`;
             }
             
             const data = response.data;
@@ -4433,8 +4448,6 @@
                 modalConn.textContent = globalConn;
                 if (globalConn === 'CONNECTED') {
                     modalConn.className = 'badge badge-green';
-                } else if (globalConn === 'SIMULATED') {
-                    modalConn.className = 'badge badge-amber';
                 } else {
                     modalConn.className = 'badge badge-gray';
                 }
@@ -4631,7 +4644,7 @@
                     if (resetBtn) resetBtn.style.display = 'inline-block';
                     if (badge) {
                         badge.style.display = 'inline-block';
-                        badge.textContent = 'Simulation Mode';
+                        badge.textContent = 'Preview Mode';
                         badge.className = 'badge badge-amber';
                     }
                     
@@ -4705,7 +4718,7 @@
                         </div>
                         <div class="report-header-right">
                             <div class="report-meta-item"><strong>Date:</strong> <span id="report-date-str">--</span></div>
-                            <div class="report-meta-item"><strong>Interface:</strong> <span id="report-interface-str">COM3 (9600 Baud)</span></div>
+                            <div class="report-meta-item"><strong>Interface:</strong> <span id="report-interface-str">COM7 (9600 Baud)</span></div>
                         </div>
                     </div>
                     
@@ -4785,8 +4798,8 @@
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <span class="badge badge-mint" id="sim-slider-badge" style="display: none; font-size: 9px; padding: 2px 6px;">Simulation Mode</span>
-                    <span class="badge badge-mint" id="modal-connection-badge">SIMULATED</span>
+                    <span class="badge badge-mint" id="sim-slider-badge" style="display: none; font-size: 9px; padding: 2px 6px;">Preview Mode</span>
+                    <span class="badge badge-gray" id="modal-connection-badge">OFFLINE</span>
                     <button class="soil-close-btn" onclick="closeSoilModal()">&times;</button>
                 </div>
             </div>
@@ -4825,7 +4838,7 @@
                         </div>
                     </div>
 
-                    <!-- Right Column: Interactive Calibration Simulator & Real-time Trends -->
+                    <!-- Right Column: Interactive Calibration Preview & Real-time Trends -->
                     <div class="soil-modal-col-right">
                         
                         <!-- Real-time Trends Chart -->
@@ -4836,11 +4849,11 @@
                             </div>
                         </div>
                         
-                        <!-- Interactive Calibration Simulator -->
+                        <!-- Interactive Calibration Preview -->
                         <div class="glass-card modal-simulator-card">
-                            <h4 class="modal-section-title">Calibration & Testing Simulator</h4>
+                            <h4 class="modal-section-title">Calibration Preview</h4>
                             <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500;">
-                                Drag the slider to override telemetry input and mock-test how the gauges, system status banners, alerts, and smart recommendations behave.
+                                Drag the slider to preview gauge thresholds, system status banners, alerts, and smart recommendations without writing records to the database.
                             </p>
                             <div class="simulator-slider-group">
                                 <div class="slider-labels">
