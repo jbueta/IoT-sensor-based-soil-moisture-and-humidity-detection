@@ -296,11 +296,11 @@ def get_latest():
         "data": None
     }
     
-    if system_status["last_reading"]:
-        response_data["data"] = system_status["last_reading"]
+    if system_status["connection"] != "CONNECTED":
         return jsonify(response_data)
 
-    if system_status["connection"] != "CONNECTED":
+    if system_status["last_reading"]:
+        response_data["data"] = system_status["last_reading"]
         return jsonify(response_data)
     
     # Fallback to query DB if cache is empty

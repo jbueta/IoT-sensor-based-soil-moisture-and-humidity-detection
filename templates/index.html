@@ -11,6 +11,8 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         /* ==========================================
            DESIGN SYSTEM & COLOR TOKENS (LIGHT GLASS SPEC)
@@ -295,23 +297,8 @@
             flex-direction: column;
             gap: 16px;
             width: 100%;
-        }
-
-        .splash-loader {
-            width: 280px;
-            height: 5px;
-            background-color: rgba(0, 0, 0, 0.06);
-            border-radius: 3px;
-            overflow: hidden;
-            transition: opacity 0.5s ease, visibility 0.5s ease, height 0.5s ease, margin 0.5s ease;
-        }
-
-        .splash-loader-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #10b981, #0284c7);
-            border-radius: 3px;
-            animation: fill-loader 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            position: relative;
+            z-index: 2;
         }
 
         .welcome-btn {
@@ -328,12 +315,20 @@
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: box-shadow 0.3s ease, background 0.3s ease;
             opacity: 0;
             transform: translateY(10px);
-            pointer-events: none;
+            pointer-events: auto;
+            visibility: visible;
             box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
             max-width: max-content;
+            animation: splashButtonAppear 0.5s ease 0.5s forwards;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes splashButtonAppear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .welcome-btn svg {
@@ -354,19 +349,7 @@
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
-        }
-
-        .splash-loader.fade-out-loader {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            height: 0;
-            margin: 0;
-        }
-
-        @keyframes fill-loader {
-            0% { width: 0%; }
-            100% { width: 100%; }
+            visibility: visible;
         }
 
         /* Right Pane Elements */
@@ -508,9 +491,6 @@
                 justify-content: center;
             }
             .welcome-btn {
-                margin: 0 auto;
-            }
-            .splash-loader {
                 margin: 0 auto;
             }
             .showcase-card {
@@ -683,6 +663,8 @@
             gap: 16px;
             margin-bottom: 30px;
             width: 100%;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .report-stat-box {
@@ -735,6 +717,11 @@
 
         .report-table tbody tr:nth-child(even) {
             background-color: #f8fafc;
+        }
+
+        .report-table tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .report-table td.mono {
@@ -1269,7 +1256,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
+            gap: 12px;
         }
 
         .card-title {
@@ -1295,18 +1283,19 @@
 
         .card-body-metrics {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            justify-content: flex-start;
+            align-items: flex-end;
             flex-grow: 1;
-            margin-bottom: 8px;
+            margin-bottom: 14px;
         }
 
         .readout-large {
             font-family: var(--font-mono);
-            font-size: 38px;
+            font-size: 40px;
             font-weight: 800;
-            line-height: 1;
-            letter-spacing: -1.5px;
+            line-height: 1.05;
+            letter-spacing: -0.8px;
+            white-space: nowrap;
         }
 
         .card-temp .readout-large { color: var(--color-cyan); }
@@ -1314,10 +1303,12 @@
         .card-soil .readout-large { color: var(--color-mint); }
 
         .readout-unit {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
-            vertical-align: super;
-            margin-left: 2px;
+            vertical-align: baseline;
+            margin-left: 6px;
+            display: inline-block;
+            transform: translateY(-0.2em);
         }
 
         /* Soil Circular Gauge Container */
@@ -1364,25 +1355,26 @@
         /* Pill Sub-Stats */
         .sub-stats-row {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
+            gap: 12px;
+            margin-top: 18px;
             border-top: 1px solid var(--border-color);
-            padding-top: 12px;
+            padding-top: 14px;
         }
 
         .stat-pill {
             font-family: var(--font-mono);
             font-size: 11px;
-            padding: 8px 10px;
-            border-radius: 8px;
+            padding: 10px 12px;
+            border-radius: 10px;
             background-color: #f1f5f9;
             border: 1.5px solid #cbd5e1;
             color: var(--text-secondary);
             flex-grow: 1;
+            min-width: 0;
             text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
             transition: all 0.2s ease;
         }
 
@@ -1427,6 +1419,31 @@
         }
         .card-humidity .stat-pill-label { color: #15803d; }
         .card-humidity .stat-pill-value { color: #052e16; }
+
+        .sensor-card.kpi-empty {
+            border-color: #dbe4ec;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .sensor-card.kpi-empty .readout-large,
+        .sensor-card.kpi-empty .gauge-text {
+            color: #94a3b8 !important;
+        }
+
+        .kpi-empty-copy {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .kpi-empty-copy strong {
+            display: block;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
 
         .card-soil .stat-pill {
             background-color: #e6fcf5;
@@ -1718,6 +1735,112 @@
             background-color: #f8fafc;
         }
 
+        .resource-center-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            padding: 22px 28px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 0 0 20px 20px;
+            box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.04);
+        }
+
+        .resource-center-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .resource-center-label {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-cyan);
+        }
+
+        .resource-center-title {
+            margin: 8px 0 0;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .resource-center-copy {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            max-width: 520px;
+        }
+
+        .resource-center-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .resource-center-actions label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-right: 6px;
+        }
+
+        .resource-center-actions select {
+            min-width: 220px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: var(--text-main);
+            font-size: 13px;
+            transition: border-color 0.2s ease;
+        }
+
+        .resource-center-actions select:focus {
+            outline: none;
+            border-color: var(--color-cyan);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+        }
+
+        .export-btn {
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .export-csv {
+            background: #0284c7;
+            color: #ffffff;
+        }
+
+        .export-pdf {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .resource-center-note {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            border-left: 3px solid var(--color-cyan);
+            padding-left: 14px;
+        }
+
         .table-title-group {
             display: flex;
             align-items: center;
@@ -1948,6 +2071,145 @@
         /* ==========================================
            DYNAMIC CHART STATUS & THRESHOLD STRIP (INTERACTIVE EXPLORER)
            ========================================== */
+        .trends-layout {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+            margin-bottom: 24px;
+        }
+
+        .trends-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 480px;
+            padding: 24px;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.95));
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        .sidebar-live-panel {
+            background: #ffffff;
+            border: 1.5px solid rgba(16, 185, 129, 0.18);
+            border-radius: 24px;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+            box-shadow: 0 16px 32px rgba(16, 185, 129, 0.08);
+        }
+
+        .sidebar-live-panel .explorer-card-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--color-cyan);
+            letter-spacing: 1.25px;
+        }
+
+        .sidebar-live-panel .explorer-live-val {
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            letter-spacing: -0.75px;
+        }
+
+        .sidebar-live-panel .badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(248, 113, 113, 0.12);
+            color: var(--color-critical);
+        }
+
+        .sidebar-details {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .sidebar-info-block {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 18px 20px;
+            border-radius: 18px;
+            background: #ffffff;
+            border: 1px solid rgba(203, 213, 225, 0.9);
+        }
+
+        .sidebar-detail-label {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        .sidebar-detail-text {
+            font-family: var(--font-sans);
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .sidebar-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .sidebar-summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .sidebar-summary-item span {
+            font-family: var(--font-sans);
+            font-size: 10.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.85px;
+            font-weight: 700;
+        }
+
+        .sidebar-summary-item strong {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--text-main);
+            font-weight: 900;
+        }
+
+        .sidebar-summary-item span {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.9px;
+            font-weight: 700;
+        }
+
+        .sidebar-summary-item strong {
+            font-size: 14px;
+            color: var(--text-main);
+            font-weight: 800;
+        }
+
         .chart-status-strip {
             display: flex;
             flex-direction: column;
@@ -1959,62 +2221,38 @@
         .status-strip-header {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .status-strip-title {
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 17px;
+            font-weight: 800;
             color: var(--text-main);
-            letter-spacing: -0.2px;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
         }
 
         .status-strip-subtitle {
-            font-size: 11.5px;
+            font-size: 12px;
             color: var(--text-muted);
-            font-weight: 500;
+            font-weight: 600;
+            line-height: 1.6;
+            letter-spacing: 0.15px;
+            max-width: 92%;
+        }
+
+        .status-strip-title + .status-strip-subtitle {
+            margin-top: 2px;
         }
 
         .status-strip-explorer {
-            display: grid;
-            grid-template-columns: 1fr 3fr;
-            gap: 20px;
-            align-items: stretch;
-        }
-
-        .explorer-live-card {
-            background: rgba(15, 23, 42, 0.02);
-            border: 1.5px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            text-align: center;
-        }
-
-        .explorer-card-label {
-            font-size: 9.5px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-
-        .explorer-live-val {
-            font-size: 26px;
-            font-weight: 800;
-            color: var(--text-main);
-            font-family: var(--font-mono);
-            letter-spacing: -1px;
+            display: block;
         }
 
         .explorer-zones {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
         }
 
         .threshold-card {
@@ -2197,9 +2435,10 @@
         }
 
         .detail-zone-indicator {
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 800;
             color: var(--text-main);
+            letter-spacing: -0.2px;
         }
 
         .detail-grid {
@@ -2230,6 +2469,17 @@
         }
 
         @media (max-width: 968px) {
+            .trends-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .trends-sidebar {
+                min-height: auto;
+            }
+            .chart-card,
+            .trends-sidebar {
+                min-height: 420px;
+            }
             .status-strip-explorer {
                 grid-template-columns: 1fr;
                 gap: 16px;
@@ -2776,11 +3026,7 @@
                 </div>
 
                 <div class="splash-action-area">
-                    <div class="splash-loader" id="splash-loader">
-                        <div class="splash-loader-bar"></div>
-                    </div>
-                    
-                    <button class="welcome-btn" id="welcome-btn" onclick="enterDashboard()">
+                    <button type="button" class="welcome-btn" id="welcome-btn" aria-label="Launch the dashboard" onclick="enterDashboard()">
                         <span>Launch Real-time Control Center</span>
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -2940,18 +3186,6 @@
                     </span>
                     <span class="badge badge-red" id="sidebar-alert-badge">0</span>
                 </a>
-                <a class="menu-item" id="menu-export" onclick="exportCSV()">
-                    <span class="menu-icon-label">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        Export CSV
-                    </span>
-                </a>
-                <a class="menu-item" id="menu-export-pdf" onclick="openPDFPreview()">
-                    <span class="menu-icon-label">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10V4m0 6l-3-3m3 3l3-3M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1"/></svg>
-                        Export PDF Report
-                    </span>
-                </a>
             </ul>
         </div>
 
@@ -3015,7 +3249,7 @@
             <div class="sensor-grid">
                 
                 <!-- Soil Moisture Card (With SVG Ring) - CLICKABLE FOR DETAILS COCKPIT -->
-                <div class="glass-card sensor-card card-soil" onclick="openSoilModal()">
+                <div class="glass-card sensor-card card-soil" id="soil-kpi-card" onclick="openSoilModal()">
                     <div class="card-header">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="card-title">Soil Moisture Main Focus</span>
@@ -3053,7 +3287,7 @@
                 </div>
 
                 <!-- Temperature Card -->
-                <div class="glass-card sensor-card card-temp">
+                <div class="glass-card sensor-card card-temp" id="temp-kpi-card">
                     <div class="card-header">
                         <span class="card-title">Temperature</span>
                         <span class="trend-badge trend-stable" id="temp-trend">──</span>
@@ -3078,7 +3312,7 @@
                 </div>
 
                 <!-- Humidity Card -->
-                <div class="glass-card sensor-card card-humidity">
+                <div class="glass-card sensor-card card-humidity" id="hum-kpi-card">
                     <div class="card-header">
                         <span class="card-title">Humidity</span>
                         <span class="trend-badge trend-stable" id="hum-trend">──</span>
@@ -3178,7 +3412,7 @@
              ========================================== -->
         <section id="view-trends" class="dashboard-view">
             
-            <!-- Full width line chart card -->
+            <div class="trends-layout">
             <div class="glass-card chart-card">
                 <div class="chart-header">
                     <div class="chart-title-group">
@@ -3207,21 +3441,45 @@
                 </div>
             </div>
 
+            <aside class="glass-card trends-sidebar">
+                <div class="sidebar-live-panel">
+                    <span class="explorer-card-label">Live Ingestion</span>
+                    <div class="explorer-live-val" id="explorer-live-val">--.-%</div>
+                    <span class="badge" id="explorer-live-badge">Awaiting sensor feed</span>
+                </div>
+
+                <div class="sidebar-details">
+                    <div class="sidebar-summary-grid">
+                        <div class="sidebar-summary-item">
+                            <span>Current Focus</span>
+                            <strong id="sidebar-current-focus">Soil Moisture</strong>
+                        </div>
+                        <div class="sidebar-summary-item">
+                            <span>Latest Sample</span>
+                            <strong id="sidebar-latest-sample">-- at --:--:--</strong>
+                        </div>
+                        <div class="sidebar-summary-item">
+                            <span>Recommended Action</span>
+                            <strong id="sidebar-recommended-action">Awaiting serial data</strong>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-info-block">
+                        <span class="sidebar-detail-label">Live Interpretation</span>
+                        <p class="sidebar-detail-text" id="sidebar-live-interpretation">A soil moisture reading below 20% signals critical dryness. Temperature and humidity are cross-checked to prevent false alarms and ensure accurate agronomic guidance.</p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
             <!-- Safety Threshold & Live Value Status Strip (Interactive Explorer) -->
             <div class="glass-card chart-status-strip" id="chart-status-strip">
                 <div class="status-strip-header">
                     <h4 class="status-strip-title">Agronomic Interpretation Explorer</h4>
-                    <p class="status-strip-subtitle">Select a threshold card below to explore ecological determination and live crop impact.</p>
+                    <p class="status-strip-subtitle">Choose a zone below to inspect ecological determination and crop impact guidance.</p>
                 </div>
                 
                 <div class="status-strip-explorer">
-                    <!-- Live Ingestion Info -->
-                    <div class="explorer-live-card">
-                        <span class="explorer-card-label">Live Ingestion</span>
-                        <div class="explorer-live-val" id="explorer-live-val">--.-%</div>
-                        <span class="badge" id="explorer-live-badge">Awaiting...</span>
-                    </div>
-                    
                     <!-- Interactive Zone Cards Container -->
                     <div class="explorer-zones" id="explorer-zones-container">
                         <div style="grid-column: span 3; text-align:center; padding: 24px; color: var(--text-muted); font-size:11.5px; font-weight:500;">
@@ -3273,6 +3531,25 @@
                     </div>
                 </div>
                 
+                <div class="resource-center-panel" id="resource-center-panel">
+                    <div class="resource-center-row">
+                        <div>
+                            <span class="resource-center-label">Resource Center</span>
+                            <h4 class="resource-center-title">Session Archive & Export Hub</h4>
+                            <p class="resource-center-copy">Browse past COM7 session records even while offline, then export the selected session as CSV or preview the selected session before downloading a PDF. This keeps historical data available while live telemetry is disconnected.</p>
+                        </div>
+                        <div class="resource-center-actions">
+                            <label for="session-filter">Session</label>
+                            <select id="session-filter" onchange="onSessionFilterChange()">
+                                <option value="all">All Sessions</option>
+                            </select>
+                            <button class="export-btn export-csv" onclick="exportCSV()">Export CSV</button>
+                            <button class="export-btn export-pdf" onclick="openPDFPreview()">Preview PDF</button>
+                        </div>
+                    </div>
+                    <div class="resource-center-note" id="resource-center-note">Historical session records remain available for COM7 even when the hardware is disconnected. Use the session selector to browse archived sessions.</div>
+                </div>
+
                 <div class="table-container">
                     <table id="log-table">
                         <thead>
@@ -3311,6 +3588,10 @@
         
         // Cache historical data locally for tab switching
         let localHistoryCache = [];
+        let allLogRows = [];
+        let selectedLogSession = 'all';
+        let currentLogSessionPort = 'COM7';
+        let pdfPreviewRows = [];
         
         // Tracking metrics for deltas
         let prevValues = {
@@ -3318,6 +3599,7 @@
             humidity: null,
             soil: null
         };
+        let hardwareConnected = false;
 
         // Selected interpretation threshold zone key
         let selectedZoneKey = null;
@@ -3510,10 +3792,12 @@
             // Switch view container
             document.querySelectorAll('.dashboard-view').forEach(view => {
                 view.classList.remove('active');
+                view.style.display = 'none'; // Ensure inline hidden
             });
             const targetView = document.getElementById(`view-${viewId}`);
             if (targetView) {
                 targetView.classList.add('active');
+                targetView.style.display = 'flex'; // Ensure inline shown as flex
                 
                 // Triggers Chart resizing to prevent visual glitches when viewport switches
                 if (viewId === 'trends') {
@@ -3649,7 +3933,8 @@
             if (placeholder) placeholder.classList.remove('visible');
 
             const timestamps = localHistoryCache.map(d => {
-                const parts = d.timestamp.split(' ');
+                if (!d.timestamp) return '';
+                const parts = String(d.timestamp).split(' ');
                 return parts.length > 1 ? parts[1] : d.timestamp;
             });
 
@@ -3786,6 +4071,37 @@
             updateGaugeRing('modal-soil-gauge-progress', percentage);
         }
 
+        function setKpiCardsEmptyState(isEmpty) {
+            ['soil-kpi-card', 'temp-kpi-card', 'hum-kpi-card'].forEach(id => {
+                const card = document.getElementById(id);
+                if (card) card.classList.toggle('kpi-empty', isEmpty);
+            });
+
+            if (!isEmpty) return;
+
+            document.getElementById('temp-readout').innerHTML = `
+                <span class="kpi-empty-copy"><strong>No live temperature</strong>Connect machine on COM7</span>
+            `;
+            document.getElementById('hum-readout').innerHTML = `
+                <span class="kpi-empty-copy"><strong>No live humidity</strong>Connect machine on COM7</span>
+            `;
+            document.getElementById('soil-readout').textContent = `--`;
+            document.getElementById('soil-status-text').textContent = "No live soil data";
+            const soilHint = document.querySelector('#soil-kpi-card .soil-hint-text');
+            if (soilHint) soilHint.textContent = "Available once machine is connected on COM7";
+
+            document.getElementById('temp-min').textContent = `--.-°C`;
+            document.getElementById('temp-avg').textContent = `--.-°C`;
+            document.getElementById('temp-max').textContent = `--.-°C`;
+            document.getElementById('hum-min').textContent = `--%`;
+            document.getElementById('hum-avg').textContent = `--%`;
+            document.getElementById('hum-max').textContent = `--%`;
+            document.getElementById('soil-min').textContent = `--%`;
+            document.getElementById('soil-avg').textContent = `--%`;
+            document.getElementById('soil-max').textContent = `--%`;
+            updateSoilGauge(0);
+        }
+
         // Format system uptime counter
         function formatUptime(seconds) {
             const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
@@ -3822,9 +4138,12 @@
         function updateLatestMetrics(response) {
             if (!response) return;
             
+            const data = response.data;
+            
             // Connection modes UI binding
             const systemMode = response.connection;
             const comPort = response.com_port;
+            hardwareConnected = systemMode === 'CONNECTED';
             
             const badgeEl = document.getElementById('connection-badge');
             const modeEl = document.getElementById('system-mode-display');
@@ -3862,36 +4181,71 @@
                 if (splashSerialEl) splashSerialEl.innerHTML = `<strong>System Offline. No Connections Detected.</strong>`;
                 if (splashDbEl) splashDbEl.innerHTML = `MySQL Target: <strong>sensor_readings</strong> (Standby)`;
             }
-            
-            const data = response.data;
-            
-            // Dynamic Status Banner Layout (Zone 1)
-            const bannerCon = document.getElementById('banner-container');
-            const bannerLed = document.getElementById('banner-led');
-            const bannerTitle = document.getElementById('banner-title');
-            const bannerDesc = document.getElementById('banner-desc');
-            
-            if (!data) {
-                // Empty state or offline state
-                bannerLed.className = 'led-dot offline';
-                bannerTitle.textContent = 'System Awaiting Telemetry Ingestion';
-                bannerDesc.textContent = `Server is listening on ${comPort}. Please power on the Arduino Uno and activate Bluetooth connection to begin logging.`;
-                bannerCon.className = 'glass-card status-banner offline';
-                
-                // Clear latest readouts to indicate waiting/empty
+
+            if (systemMode !== 'CONNECTED' || !data) {
+                const latestSampleEl = document.getElementById('sidebar-latest-sample');
+                const actionEl = document.getElementById('sidebar-recommended-action');
+                if (systemMode === 'CONNECTED' && data && data.timestamp) {
+                    const timePart = String(data.timestamp).split(' ')[1] || data.timestamp;
+                    const latestSampleText = `${parseFloat(data.soil_pct).toFixed(1)}% @ ${timePart}`;
+                    if (latestSampleEl) latestSampleEl.textContent = latestSampleText;
+
+                    if (actionEl) {
+                        const soilLevel = parseFloat(data.soil_pct);
+                        if (soilLevel < 20) {
+                            actionEl.textContent = 'Irrigate immediately and check soil moisture probes.';
+                        } else if (soilLevel < 40) {
+                            actionEl.textContent = 'Increase watering slightly to stabilize moisture.';
+                        } else if (soilLevel <= 80) {
+                            actionEl.textContent = 'Maintain current irrigation schedule.';
+                        } else {
+                            actionEl.textContent = 'Reduce watering to avoid saturation and root stress.';
+                        }
+                    }
+                } else {
+                    if (latestSampleEl) latestSampleEl.textContent = '-- at --:--:--';
+                    if (actionEl) actionEl.textContent = 'Awaiting serial data';
+                }
                 document.getElementById('temp-readout').innerHTML = `--.-<span class="readout-unit">°C</span>`;
                 document.getElementById('hum-readout').innerHTML = `--<span class="readout-unit">%</span>`;
                 document.getElementById('soil-readout').textContent = `--%`;
                 document.getElementById('soil-status-text').textContent = "Awaiting Ingestion...";
                 
-                updateSoilGauge(0);
+                setKpiCardsEmptyState(true);
                 
+                const liveValEl = document.getElementById('explorer-live-val');
+                const liveBadgeEl = document.getElementById('explorer-live-badge');
+                if (liveValEl) liveValEl.textContent = '--.-%';
+                if (liveBadgeEl) {
+                    liveBadgeEl.textContent = 'Awaiting...';
+                    liveBadgeEl.className = 'badge badge-gray';
+                }
+                
+                const zonesCon = document.getElementById('explorer-zones-container');
+                if (zonesCon) {
+                    zonesCon.innerHTML = `
+                        <div style="grid-column: span 3; text-align:center; padding: 24px; color: var(--text-muted); font-size:11.5px; font-weight:500;">
+                            Awaiting telemetry stream...
+                        </div>
+                    `;
+                }
+                
+                const detTitleEl = document.getElementById('detail-zone-title');
+                const detEl = document.getElementById('detail-determination-text');
+                const impEl = document.getElementById('detail-impact-text');
+                if (detTitleEl) detTitleEl.textContent = 'Select a zone above to inspect';
+                if (detEl) detEl.textContent = 'Please wait for real-time sensor data.';
+                if (impEl) impEl.textContent = 'Please wait for real-time sensor data.';
+
                 // Stable trends
                 renderDeltaTrend('temp-trend', null, null);
                 renderDeltaTrend('hum-trend', null, null);
                 renderDeltaTrend('soil-trend', null, null);
                 
                 prevValues = { temp: null, humidity: null, soil: null };
+                
+                // Keep historical chart history visible if available
+                renderChartData();
                 return;
             }
             
@@ -3899,10 +4253,14 @@
             const temp = parseFloat(data.temp_c);
             const hum = parseFloat(data.humidity_pct);
             const soil = parseFloat(data.soil_pct);
+            setKpiCardsEmptyState(false);
             
             document.getElementById('temp-readout').innerHTML = `${temp.toFixed(1)}<span class="readout-unit">°C</span>`;
             document.getElementById('hum-readout').innerHTML = `${hum.toFixed(0)}<span class="readout-unit">%</span>`;
             
+            const soilHint = document.querySelector('#soil-kpi-card .soil-hint-text');
+            if (soilHint) soilHint.textContent = "Click card for detail telemetry cockpit";
+
             // Update soil telemetry via centralized UI controller
             if (!soilSimulationOverride) {
                 updateSoilUI(soil);
@@ -4009,6 +4367,17 @@
                             document.getElementById('fill-rows').style.width = '0%';
                             return;
                         }
+
+                        // Keep analytics/performance historical counts, but do not populate
+                        // live KPI cards unless COM7 telemetry is actively connected.
+                        if (!hardwareConnected) {
+                            setKpiCardsEmptyState(true);
+                            const rowCount = s.row_count;
+                            document.getElementById('metric-rows').textContent = rowCount;
+                            const rowsPct = Math.min(100, (rowCount / 200) * 100);
+                            document.getElementById('fill-rows').style.width = `${rowsPct}%`;
+                            return;
+                        }
                         
                         // Min/Avg/Max pills Temperature
                         document.getElementById('temp-min').textContent = `${s.temp.min.toFixed(1)}°C`;
@@ -4038,110 +4407,183 @@
 
         // Fetch logs data table `/api/log`
         function fetchSystemLogs() {
-            fetch('/api/log?limit=15')
+            fetch('/api/log?limit=200')
                 .then(res => res.json())
                 .then(res => {
                     if (res.status === 'SUCCESS' && res.data) {
-                        const rows = res.data;
-                        
-                        // Render full main logs table
-                        const body = document.getElementById('log-table-body');
-                        body.innerHTML = '';
-                        
-                        // Render mini logs events list
-                        const miniLogsContainer = document.getElementById('mini-logs-container');
-                        miniLogsContainer.innerHTML = '';
-                        
-                        let currentAlerts = 0;
-
-                        if (rows.length === 0) {
-                            body.innerHTML = `
-                            <tr>
-                                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px; font-weight: 500;">
-                                    No records found in database. Waiting for active serial transmission from Arduino Uno...
-                                </td>
-                            </tr>`;
-                            
-                            miniLogsContainer.innerHTML = `
-                            <div style="text-align:center; padding: 36px; color: var(--text-muted); font-size: 11.5px; font-weight:500;">
-                                Awaiting dynamic serial ingestion stream...
-                            </div>`;
-                            
-                            document.getElementById('sidebar-alert-badge').textContent = '0';
-                            document.getElementById('metric-alerts').textContent = '0';
-                            document.getElementById('fill-alerts').style.width = '0%';
-                            return;
-                        }
-
-                        // Display list size limits
-                        rows.forEach((r, idx) => {
-                            let statusClass = 'cell-optimal';
-                            let rowClass = '';
-                            let flagDotClass = 'ok';
-
-                            if (r.status === 'CRITICAL') {
-                                statusClass = 'cell-critical';
-                                rowClass = 'row-critical';
-                                flagDotClass = 'dry';
-                                currentAlerts++;
-                            } else if (r.status === 'WARN') {
-                                statusClass = 'cell-warn';
-                                rowClass = 'row-warn';
-                                flagDotClass = 'temp';
-                                currentAlerts++;
-                            }
-
-                            // Render table row
-                            const tr = document.createElement('tr');
-                            tr.className = rowClass;
-                            tr.innerHTML = `
-                                <td class="td-mono">${r.id}</td>
-                                <td class="td-mono">${r.timestamp}</td>
-                                <td class="td-mono">${parseFloat(r.soil_pct).toFixed(0)} %</td>
-                                <td class="td-mono">${parseFloat(r.temp_c).toFixed(1)} °C</td>
-                                <td class="td-mono">${parseFloat(r.humidity_pct).toFixed(0)} %</td>
-                                <td>
-                                    <span class="status-pill-cell ${statusClass}">${r.status}</span>
-                                </td>
-                                <td>
-                                    <span class="flag-dot ${flagDotClass}"></span>
-                                    <span class="td-mono" style="font-size: 11px; font-weight:800;">${r.flag}</span>
-                                </td>
-                            `;
-                            body.appendChild(tr);
-
-                            // Render dynamic mini event list (last 4 alerts/events)
-                            if (idx < 4) {
-                                let statusPillColor = 'rgba(51, 188, 101, 0.1)';
-                                let statusTextColor = 'var(--color-emerald)';
-                                if (r.status === 'CRITICAL') {
-                                    statusPillColor = 'rgba(239, 68, 68, 0.1)';
-                                    statusTextColor = 'var(--color-critical)';
-                                } else if (r.status === 'WARN') {
-                                    statusPillColor = 'rgba(234, 179, 8, 0.1)';
-                                    statusTextColor = 'var(--color-warn)';
-                                }
-
-                                const miniItem = document.createElement('div');
-                                miniItem.className = 'mini-log-item';
-                                miniItem.innerHTML = `
-                                    <span style="color: var(--text-secondary); font-size: 11px;">#${r.id} (${r.timestamp.split(' ')[1]})</span>
-                                    <span style="font-weight: 500;">S: ${parseFloat(r.soil_pct).toFixed(0)}% | T: ${parseFloat(r.temp_c).toFixed(0)}° | H: ${parseFloat(r.humidity_pct).toFixed(0)}%</span>
-                                    <span class="mini-log-status" style="background-color: ${statusPillColor}; color: ${statusTextColor};">${r.status}</span>
-                                `;
-                                miniLogsContainer.appendChild(miniItem);
-                            }
-                        });
-                        
-                        // Update Alert Badges
-                        document.getElementById('sidebar-alert-badge').textContent = currentAlerts;
-                        document.getElementById('metric-alerts').textContent = currentAlerts;
-                        
-                        const alertsPct = Math.min(100, (currentAlerts / 15) * 100);
-                        document.getElementById('fill-alerts').style.width = `${alertsPct}%`;
+                        allLogRows = res.data;
+                        populateSessionFilter(allLogRows);
+                        renderLogTable();
+                        updateResourceStateBanner();
                     }
                 })
                 .catch(err => console.error("Logs Fetch Error:", err));
+        }
+
+        function getSessionLabel(row) {
+            if (!row) return 'Unknown Session';
+            if (row.session) return row.session;
+            if (row.session_id) return row.session_id;
+
+            const timestamp = row.timestamp || '';
+            const date = new Date(timestamp);
+            const dateLabel = isNaN(date) ? 'Unknown Date' : date.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+
+            return `${currentLogSessionPort} • ${dateLabel}`;
+        }
+
+        function populateSessionFilter(rows) {
+            const selectEl = document.getElementById('session-filter');
+            if (!selectEl) return;
+
+            const sessionMap = new Map();
+            sessionMap.set('all', 'All Sessions');
+
+            rows.forEach(r => {
+                const label = getSessionLabel(r);
+                if (!sessionMap.has(label)) {
+                    sessionMap.set(label, label);
+                }
+            });
+
+            const currentValue = selectEl.value || selectedLogSession;
+            selectEl.innerHTML = '';
+
+            sessionMap.forEach((label, value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                selectEl.appendChild(option);
+            });
+
+            selectedLogSession = sessionMap.has(currentValue) ? currentValue : 'all';
+            selectEl.value = selectedLogSession;
+        }
+
+        function filterLogRowsBySession(rows) {
+            if (!rows || selectedLogSession === 'all') return rows || [];
+            return rows.filter(r => getSessionLabel(r) === selectedLogSession);
+        }
+
+        function renderLogTable() {
+            const rows = filterLogRowsBySession(allLogRows);
+            const body = document.getElementById('log-table-body');
+            const miniLogsContainer = document.getElementById('mini-logs-container');
+            const note = document.getElementById('resource-center-note');
+
+            if (!body || !miniLogsContainer || !note) return;
+
+            if (!rows || rows.length === 0) {
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px; font-weight: 500;">
+                            No records found for the selected session. Use the session selector to browse archives.
+                        </td>
+                    </tr>`;
+                miniLogsContainer.innerHTML = `
+                    <div style="text-align:center; padding: 36px; color: var(--text-muted); font-size: 11.5px; font-weight:500;">
+                        No session records available.
+                    </div>`;
+                return;
+            }
+
+            body.innerHTML = '';
+            miniLogsContainer.innerHTML = '';
+            let currentAlerts = 0;
+
+            rows.forEach((r, idx) => {
+                let statusClass = 'cell-optimal';
+                let rowClass = '';
+                let flagDotClass = 'ok';
+
+                if (r.status === 'CRITICAL') {
+                    statusClass = 'cell-critical';
+                    rowClass = 'row-critical';
+                    flagDotClass = 'dry';
+                    currentAlerts++;
+                } else if (r.status === 'WARN' || r.status === 'WARNING') {
+                    statusClass = 'cell-warn';
+                    rowClass = 'row-warn';
+                    flagDotClass = 'temp';
+                    currentAlerts++;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = rowClass;
+                tr.innerHTML = `
+                    <td class="td-mono">${r.id}</td>
+                    <td class="td-mono">${r.timestamp}</td>
+                    <td class="td-mono">${parseFloat(r.soil_pct).toFixed(0)} %</td>
+                    <td class="td-mono">${parseFloat(r.temp_c).toFixed(1)} °C</td>
+                    <td class="td-mono">${parseFloat(r.humidity_pct).toFixed(0)} %</td>
+                    <td>
+                        <span class="status-pill-cell ${statusClass}">${r.status}</span>
+                    </td>
+                    <td>
+                        <span class="flag-dot ${flagDotClass}"></span>
+                        <span class="td-mono" style="font-size: 11px; font-weight:800;">${r.flag}</span>
+                    </td>
+                `;
+                body.appendChild(tr);
+
+                if (idx < 4) {
+                    let statusPillColor = 'rgba(51, 188, 101, 0.1)';
+                    let statusTextColor = 'var(--color-emerald)';
+                    if (r.status === 'CRITICAL') {
+                        statusPillColor = 'rgba(239, 68, 68, 0.1)';
+                        statusTextColor = 'var(--color-critical)';
+                    } else if (r.status === 'WARN' || r.status === 'WARNING') {
+                        statusPillColor = 'rgba(234, 179, 8, 0.1)';
+                        statusTextColor = 'var(--color-warn)';
+                    }
+
+                    const timePart = r.timestamp ? String(r.timestamp).split(' ')[1] || r.timestamp : '';
+                    const miniItem = document.createElement('div');
+                    miniItem.className = 'mini-log-item';
+                    miniItem.innerHTML = `
+                        <span style="color: var(--text-secondary); font-size: 11px;">#${r.id} (${timePart})</span>
+                        <span style="font-weight: 500;">S: ${parseFloat(r.soil_pct).toFixed(0)}% | T: ${parseFloat(r.temp_c).toFixed(0)}° | H: ${parseFloat(r.humidity_pct).toFixed(0)}%</span>
+                        <span class="mini-log-status" style="background-color: ${statusPillColor}; color: ${statusTextColor};">${r.status}</span>
+                    `;
+                    miniLogsContainer.appendChild(miniItem);
+                }
+            });
+
+            document.getElementById('sidebar-alert-badge').textContent = currentAlerts;
+            document.getElementById('metric-alerts').textContent = currentAlerts;
+            document.getElementById('fill-alerts').style.width = `${Math.min(100, (currentAlerts / Math.max(rows.length, 1)) * 100)}%`;
+        }
+
+        function onSessionFilterChange() {
+            const selectEl = document.getElementById('session-filter');
+            if (!selectEl) return;
+            selectedLogSession = selectEl.value;
+            renderLogTable();
+            updateResourceStateBanner();
+        }
+
+        function updateResourceStateBanner() {
+            const note = document.getElementById('resource-center-note');
+            if (!note) return;
+
+            const sessionText = selectedLogSession === 'all' ? 'All Sessions' : selectedLogSession;
+            if (!hardwareConnected) {
+                note.textContent = `Offline mode. Showing archived COM7 session records for ${sessionText}. Export CSV or PDF once you have selected the appropriate archive.`;
+            } else {
+                note.textContent = `Live COM7 connection active. Archived session records are also available for ${sessionText}. Use the selector to choose a historical session.`;
+            }
+        }
+
+        function openResourceCenter(action) {
+            switchView('logs');
+            setTimeout(() => {
+                const panel = document.getElementById('resource-center-panel');
+                if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (action === 'csv') exportCSV();
+                if (action === 'pdf') openPDFPreview();
+            }, 120);
         }
 
         // Fetch chart history `/api/history`
@@ -4169,27 +4611,51 @@
                 .catch(err => console.error("Poll Latest Error:", err));
         }
 
+        function getRowsForExport() {
+            const rows = (Array.isArray(allLogRows) && allLogRows.length > 0) ? allLogRows : [];
+            if (selectedLogSession === 'all') return rows;
+            return rows.filter(r => getSessionLabel(r) === selectedLogSession);
+        }
+
+        function downloadCsv(rows) {
+            if (!rows || rows.length === 0) {
+                alert("No records available for the selected session to export.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "ID,Timestamp,Soil Moisture (%),Temperature (C),Humidity (%),Status,Alert Flag\n";
+
+            rows.forEach(r => {
+                csvContent += `${r.id},${r.timestamp},${r.soil_pct},${r.temp_c},${r.humidity_pct},${r.status},${r.flag}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `robosense_export_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // Export MySQL logs as standard CSV
         function exportCSV() {
-            fetch('/api/history?limit=100')
+            const selectedRows = getRowsForExport();
+            if (selectedRows.length > 0) {
+                downloadCsv(selectedRows);
+                return;
+            }
+
+            fetch('/api/history?limit=200')
                 .then(res => res.json())
                 .then(res => {
                     if (res.status === 'SUCCESS' && res.data && res.data.length > 0) {
-                        const data = res.data;
-                        let csvContent = "data:text/csv;charset=utf-8,";
-                        csvContent += "ID,Timestamp,Soil Moisture (%),Temperature (C),Humidity (%),Status,Alert Flag\n";
-                        
-                        data.forEach(r => {
-                            csvContent += `${r.id},${r.timestamp},${r.soil_pct},${r.temp_c},${r.humidity_pct},${r.status},${r.flag}\n`;
-                        });
-                        
-                        const encodedUri = encodeURI(csvContent);
-                        const link = document.createElement("a");
-                        link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", `robosense_export_${new Date().toISOString().slice(0,10)}.csv`);
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        const historyRows = Array.isArray(res.data) ? res.data : [];
+                        const filtered = selectedLogSession === 'all'
+                            ? historyRows
+                            : historyRows.filter(r => getSessionLabel(r) === selectedLogSession);
+                        downloadCsv(filtered);
                     } else {
                         alert("No records found in database to export.");
                     }
@@ -4221,149 +4687,168 @@
             const splash = document.getElementById('splash-screen');
             if (splash) {
                 splash.classList.add('fade-out');
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                }, 900);
+            }
+
+            // Force overview view to show, with fallback for any hidden layout.
+            const overviewView = document.getElementById('view-overview');
+            if (overviewView) {
+                document.querySelectorAll('.dashboard-view').forEach(view => {
+                    view.classList.remove('active');
+                    view.style.display = 'none';
+                });
+                overviewView.classList.add('active');
+                overviewView.style.display = 'flex';
+            }
+
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            const overviewNav = document.getElementById('menu-overview');
+            if (overviewNav) overviewNav.classList.add('active');
+
+            try {
+                switchView('overview');
+            } catch (err) {
+                console.warn('Fallback dashboard navigation applied.', err);
             }
         }
 
         // Open PDF Print Preview Modal with database history
         function openPDFPreview() {
-            // Fetch latest system details to get COM port and connection status dynamically
-            let comPort = "COM7";
-            let connStatus = "DISCONNECTED";
-            
-            fetch('/api/latest')
-                .then(res => res.json())
-                .then(latestRes => {
-                    if (latestRes.status === 'SUCCESS') {
-                        comPort = latestRes.com_port || "COM7";
-                        connStatus = latestRes.connection || "DISCONNECTED";
-                    }
-                })
-                .catch(err => console.error("Error fetching latest info for PDF:", err))
-                .finally(() => {
-                    document.getElementById('report-interface-str').innerHTML = `<strong>${comPort}</strong> (${connStatus})`;
-                });
+            const rows = getRowsForExport();
+            if (rows.length > 0) {
+                pdfPreviewRows = rows;
+                renderPDFPreview(rows);
+                return;
+            }
 
-            // Retrieve history
-            fetch('/api/history?limit=100')
+            fetch('/api/history?limit=200')
                 .then(res => res.json())
                 .then(res => {
-                    if (res.status === 'SUCCESS' && res.data && res.data.length > 0) {
-                        const data = res.data;
-                        
-                        // Set Date
-                        document.getElementById('report-date-str').textContent = new Date().toLocaleString('en-US', {
-                            year: 'numeric', month: 'short', day: 'numeric',
-                            hour: '2-digit', minute: '2-digit', second: '2-digit'
-                        });
-                        
-                        // Fill Summary Stats
-                        document.getElementById('report-stat-total').textContent = data.length;
-                        
-                        let totalTemp = 0, totalHum = 0, totalSoil = 0;
-                        data.forEach(r => {
-                            totalTemp += parseFloat(r.temp_c);
-                            totalHum += parseFloat(r.humidity_pct);
-                            totalSoil += parseFloat(r.soil_pct);
-                        });
-                        
-                        document.getElementById('report-stat-avg-temp').textContent = (totalTemp / data.length).toFixed(1) + " °C";
-                        document.getElementById('report-stat-avg-humidity').textContent = (totalHum / data.length).toFixed(1) + " %";
-                        document.getElementById('report-stat-avg-soil').textContent = (totalSoil / data.length).toFixed(1) + " %";
-                        
-                        // Populate Table
-                        const tbody = document.getElementById('pdf-report-table-body');
-                        tbody.innerHTML = '';
-                        
-                        data.forEach(r => {
-                            const tr = document.createElement('tr');
-                            
-                            // Format stats to exactly 1 decimal place cleanly
-                            const tempVal = parseFloat(r.temp_c).toFixed(1);
-                            const humVal = parseFloat(r.humidity_pct).toFixed(1);
-                            const soilVal = parseFloat(r.soil_pct).toFixed(1);
-                            
-                            // Format status nicely with high-contrast colorful pill badges
-                            let statusColor = '#0f172a';
-                            let statusBg = '#f1f5f9';
-                            let statusBorder = '#cbd5e1';
-                            
-                            if (r.status === 'OPTIMAL') {
-                                statusColor = '#166534';
-                                statusBg = '#e6f4ea';
-                                statusBorder = '#a3cfbb';
-                            } else if (r.status === 'WARNING' || r.status === 'WARN') {
-                                statusColor = '#92400e';
-                                statusBg = '#fffbeb';
-                                statusBorder = '#fef08a';
-                            } else if (r.status === 'CRITICAL') {
-                                statusColor = '#991b1b';
-                                statusBg = '#fef2f2';
-                                statusBorder = '#fecaca';
-                            }
-                            
-                            // Format alert flag nicely with color badges
-                            let flagText = '-';
-                            let flagColor = '#64748b';
-                            let flagBg = '#f8fafc';
-                            let flagBorder = '#e2e8f0';
-                            
-                            if (r.flag && r.flag !== 'NONE' && r.flag !== 'OK') {
-                                flagText = r.flag;
-                                if (r.flag === 'TEMP') {
-                                    flagColor = '#0369a1';
-                                    flagBg = '#e0f2fe';
-                                    flagBorder = '#7dd3fc';
-                                } else if (r.flag === 'DRY') {
-                                    flagColor = '#c2410c';
-                                    flagBg = '#fff7ed';
-                                    flagBorder = '#ffedd5';
-                                } else {
-                                    flagColor = '#991b1b';
-                                    flagBg = '#fef2f2';
-                                    flagBorder = '#fecaca';
-                                }
-                            }
-                            
-                            tr.innerHTML = `
-                                <td class="mono bold" style="color: #64748b; text-align: left;">#${r.id}</td>
-                                <td class="mono" style="text-align: left;">${r.timestamp}</td>
-                                <td class="mono bold" style="text-align: center;">${soilVal}%</td>
-                                <td class="mono bold" style="text-align: center;">${tempVal} °C</td>
-                                <td class="mono bold" style="text-align: center;">${humVal}%</td>
-                                <td style="text-align: center;">
-                                    <span class="status-pill-print" style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; background-color: ${statusBg}; color: ${statusColor}; border: 1.5px solid ${statusBorder};">
-                                        ${r.status}
-                                    </span>
-                                </td>
-                                <td style="text-align: center;">
-                                    <span class="status-pill-print" style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; background-color: ${flagBg}; color: ${flagColor}; border: 1.5px solid ${flagBorder};">
-                                        ${flagText}
-                                    </span>
-                                </td>
-                            `;
-                            tbody.appendChild(tr);
-                        });
-                        
-                        // Show modal
-                        document.getElementById('pdf-preview-modal').style.display = 'flex';
+                    const historyRows = (res.status === 'SUCCESS' && Array.isArray(res.data)) ? res.data : [];
+                    const filteredRows = selectedLogSession === 'all'
+                        ? historyRows
+                        : historyRows.filter(r => getSessionLabel(r) === selectedLogSession);
+                    if (filteredRows.length > 0) {
+                        pdfPreviewRows = filteredRows;
+                        renderPDFPreview(filteredRows);
                     } else {
                         alert("No records found in database to export.");
                     }
                 })
                 .catch(err => {
-                    console.error("PDF preview generation error:", err);
+                    console.error("PDF preview error:", err);
                     alert("Failed to retrieve telemetry logs for preview.");
                 });
         }
-        
-        // Close Modal
+
+        function renderPDFPreview(data) {
+            if (!Array.isArray(data) || data.length === 0) {
+                alert("No records available for PDF preview.");
+                return;
+            }
+
+            const sessionLabel = selectedLogSession === 'all' ? 'All Sessions' : selectedLogSession;
+            document.getElementById('report-meta-session').textContent = sessionLabel;
+            document.getElementById('report-date-str').textContent = new Date().toLocaleString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+
+            document.getElementById('report-stat-total').textContent = data.length;
+            let totalTemp = 0, totalHum = 0, totalSoil = 0;
+            data.forEach(r => {
+                totalTemp += parseFloat(r.temp_c);
+                totalHum += parseFloat(r.humidity_pct);
+                totalSoil += parseFloat(r.soil_pct);
+            });
+            document.getElementById('report-stat-avg-temp').textContent = (totalTemp / data.length).toFixed(1) + " °C";
+            document.getElementById('report-stat-avg-humidity').textContent = (totalHum / data.length).toFixed(1) + " %";
+            document.getElementById('report-stat-avg-soil').textContent = (totalSoil / data.length).toFixed(1) + " %";
+
+            const tbody = document.getElementById('pdf-report-table-body');
+            tbody.innerHTML = '';
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="mono bold">#${r.id}</td>
+                    <td class="mono">${r.timestamp}</td>
+                    <td class="mono">${parseFloat(r.soil_pct).toFixed(0)}%</td>
+                    <td class="mono">${parseFloat(r.temp_c).toFixed(1)}°C</td>
+                    <td class="mono">${parseFloat(r.humidity_pct).toFixed(0)}%</td>
+                    <td class="mono">${r.status}</td>
+                    <td class="mono">${r.flag}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('pdf-preview-modal').style.display = 'flex';
+        }
+
         function closePDFPreview() {
             document.getElementById('pdf-preview-modal').style.display = 'none';
         }
-        
-        // Print Report
-        function printPDFReport() {
-            window.print();
+
+        function downloadPDF() {
+            const element = document.getElementById('pdf-preview-content');
+            if (!element) {
+                alert("Preview content not found.");
+                return;
+            }
+
+            if (typeof html2pdf === 'undefined') {
+                alert("Styled PDF generator is still loading. Please try again in a moment.");
+                return;
+            }
+
+            const sessionLabel = selectedLogSession === 'all' ? 'All Sessions' : selectedLogSession;
+            const fileName = `robosense_report_${sessionLabel.replace(/[^a-zA-Z0-9]+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+            // Cache current interactive styling properties
+            const originalBorder = element.style.border;
+            const originalBoxShadow = element.style.boxShadow;
+            const originalBorderRadius = element.style.borderRadius;
+            const originalMaxWidth = element.style.maxWidth;
+            const originalWidth = element.style.width;
+
+            // Reset constraints to fit the landscape Letter print sheet cleanly
+            element.style.border = 'none';
+            element.style.boxShadow = 'none';
+            element.style.borderRadius = '0';
+            element.style.maxWidth = '100%';
+            element.style.width = '792pt'; // Fits letter width in points (landscape)
+
+            const opt = {
+                margin: [30, 40, 30, 40], // Top, Left, Bottom, Right margin
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    letterRendering: true,
+                    logging: false 
+                },
+                jsPDF: { unit: 'pt', format: 'letter', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            // Capture and download PDF, then restore original screen preview styling
+            html2pdf().from(element).set(opt).save().then(() => {
+                element.style.border = originalBorder;
+                element.style.boxShadow = originalBoxShadow;
+                element.style.borderRadius = originalBorderRadius;
+                element.style.maxWidth = originalMaxWidth;
+                element.style.width = originalWidth;
+            }).catch(err => {
+                console.error("PDF Export error:", err);
+                alert("An error occurred during styled PDF export.");
+                element.style.border = originalBorder;
+                element.style.boxShadow = originalBoxShadow;
+                element.style.borderRadius = originalBorderRadius;
+                element.style.maxWidth = originalMaxWidth;
+                element.style.width = originalWidth;
+            });
         }
 
         // ==========================================
@@ -4546,7 +5031,8 @@
             
             const slice = localHistoryCache.slice(-15);
             const labels = slice.map(d => {
-                const parts = d.timestamp.split(' ');
+                if (!d.timestamp) return '';
+                const parts = String(d.timestamp).split(' ');
                 return parts.length > 1 ? parts[1] : d.timestamp;
             });
             const values = slice.map(d => parseFloat(d.soil_pct));
@@ -4572,7 +5058,7 @@
                         }
                         
                         rows.forEach(r => {
-                            const timeStr = r.timestamp.split(' ')[1] || r.timestamp;
+                            const timeStr = r.timestamp ? String(r.timestamp).split(' ')[1] || r.timestamp : '';
                             const soilVal = parseFloat(r.soil_pct).toFixed(0) + '%';
                             
                             let statusText = "OPTIMAL";
@@ -4616,17 +5102,36 @@
             }
         }
 
+        function revealSplashCTA() {
+            const btn = document.getElementById('welcome-btn');
+            if (btn) {
+                btn.classList.add('visible');
+                btn.style.visibility = 'visible';
+                btn.style.pointerEvents = 'auto';
+                btn.style.transform = 'translateY(0)';
+                btn.disabled = false;
+            }
+        }
+
         // Setup and kickoff
         window.addEventListener('DOMContentLoaded', () => {
-            initChart();
-            
-            // Transition loader to interactive proceed button after progress completes (2s)
-            setTimeout(() => {
-                const loader = document.getElementById('splash-loader');
-                const btn = document.getElementById('welcome-btn');
-                if (loader) loader.classList.add('fade-out-loader');
-                if (btn) btn.classList.add('visible');
-            }, 2000);
+            const welcomeBtn = document.getElementById('welcome-btn');
+            if (welcomeBtn) {
+                welcomeBtn.type = 'button';
+                welcomeBtn.addEventListener('click', enterDashboard);
+            }
+
+            // Fade in CTA after a short loading delay
+            setTimeout(revealSplashCTA, 500);
+
+            // Initialize chart safely so splash logic always continues
+            try {
+                if (window.Chart && typeof initChart === 'function') {
+                    initChart();
+                }
+            } catch (err) {
+                console.warn('Chart initialization failed, continuing splash flow.', err);
+            }
 
             // Bind calibration slider events
             const slider = document.getElementById('soil-calibration-slider');
@@ -4655,11 +5160,8 @@
             // Close modal when clicking outside
             window.addEventListener('click', function(e) {
                 const soilModal = document.getElementById('soil-detail-modal');
-                const pdfModal = document.getElementById('pdf-preview-modal');
                 if (e.target === soilModal) {
                     closeSoilModal();
-                } else if (e.target === pdfModal) {
-                    closePDFPreview();
                 }
             });
 
@@ -4685,100 +5187,6 @@
         });
     </script>
 
-    <!-- PDF PREVIEW & EXPORT MODAL -->
-    <div id="pdf-preview-modal" class="pdf-modal-overlay" style="display: none;">
-        <div class="pdf-modal-card">
-            <div class="pdf-modal-header">
-                <h3>Report Print & Export Preview</h3>
-                <button class="pdf-close-icon" onclick="closePDFPreview()">&times;</button>
-            </div>
-            
-            <div class="pdf-modal-scroll-area">
-                <!-- Printable Content Area -->
-                <div id="pdf-preview-content" class="printable-report">
-                    <div class="report-header">
-                        <div class="report-header-left" style="text-align: left;">
-                            <div class="report-brand">
-                                <!-- Glowing mini brand SVG logo -->
-                                <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <defs>
-                                        <linearGradient id="pdfReportLeafGrad" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
-                                            <stop offset="0%" stop-color="#10b981" />
-                                            <stop offset="100%" stop-color="#0284c7" />
-                                        </linearGradient>
-                                    </defs>
-                                    <circle cx="100" cy="100" r="85" stroke="#10b981" stroke-width="8" stroke-dasharray="16 16" />
-                                    <path d="M100 30 C50 70 40 130 100 170" stroke="url(#pdfReportLeafGrad)" stroke-width="12" stroke-linecap="round" />
-                                    <path d="M100 30 C150 70 160 130 100 170" stroke="url(#pdfReportLeafGrad)" stroke-width="12" stroke-linecap="round" />
-                                    <path d="M100 30 L100 170" stroke="url(#pdfReportLeafGrad)" stroke-width="8" stroke-linecap="round" />
-                                </svg>
-                                <h2>RoboSense Monitor</h2>
-                            </div>
-                            <p class="report-subtitle">IoT Environmental Intelligence System Report</p>
-                        </div>
-                        <div class="report-header-right">
-                            <div class="report-meta-item"><strong>Date:</strong> <span id="report-date-str">--</span></div>
-                            <div class="report-meta-item"><strong>Interface:</strong> <span id="report-interface-str">COM7 (9600 Baud)</span></div>
-                        </div>
-                    </div>
-                    
-                    <div class="report-divider"></div>
-                    
-                    <div class="report-section-title">Telemetry Analytics Summary</div>
-                    <div class="report-stats-grid">
-                        <div class="report-stat-box">
-                            <div class="report-stat-label">Total Readings</div>
-                            <div class="report-stat-value" id="report-stat-total">0</div>
-                        </div>
-                        <div class="report-stat-box">
-                            <div class="report-stat-label">Avg Soil Moisture</div>
-                            <div class="report-stat-value" id="report-stat-avg-soil">0.0 %</div>
-                        </div>
-                        <div class="report-stat-box">
-                            <div class="report-stat-label">Avg Temperature</div>
-                            <div class="report-stat-value" id="report-stat-avg-temp">0.0 °C</div>
-                        </div>
-                        <div class="report-stat-box">
-                            <div class="report-stat-label">Avg Humidity</div>
-                            <div class="report-stat-value" id="report-stat-avg-humidity">0.0 %</div>
-                        </div>
-                    </div>
-                    
-                    <div class="report-section-title">Raw Telemetry Records</div>
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 70px; text-align: left;">ID</th>
-                                <th style="width: 170px; text-align: left;">Timestamp</th>
-                                <th style="text-align: center; width: 140px;">Soil Moisture (%)</th>
-                                <th style="text-align: center; width: 100px;">Temp (°C)</th>
-                                <th style="text-align: center; width: 110px;">Humidity (%)</th>
-                                <th style="text-align: center; width: 120px;">Node Status</th>
-                                <th style="text-align: center; width: 110px;">Alert Flag</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pdf-report-table-body">
-                            <!-- Populated dynamically via Javascript -->
-                        </tbody>
-                    </table>
-                    
-                    <div class="report-footer">
-                        <p>© 2026 RoboSense Environmental Intelligence System • Confidential Report</p>
-                        <p>Generated dynamically from local telemetry logs stored in MySQL.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="pdf-modal-actions">
-                <button class="pdf-btn pdf-btn-secondary" onclick="closePDFPreview()">Cancel & Close</button>
-                <button class="pdf-btn pdf-btn-primary" onclick="printPDFReport()">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right: 6px;">
-                        <path d="M12 10V4m0 6l-3-3m3 3l3-3M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1"/>
-                    </svg>
-                    Print / Save PDF
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- SOIL MOISTURE TELEMETRY COCKPIT MODAL -->
@@ -4902,6 +5310,92 @@
             
             <div class="soil-modal-actions">
                 <button class="soil-btn soil-btn-primary" onclick="closeSoilModal()">Close Telemetry Cockpit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF PREVIEW & EXPORT MODAL -->
+    <div id="pdf-preview-modal" class="pdf-modal-overlay" style="display: none;">
+        <div class="pdf-modal-card">
+            <div class="pdf-modal-header">
+                <h3>PDF Report Preview</h3>
+                <button class="pdf-close-icon" onclick="closePDFPreview()">&times;</button>
+            </div>
+
+            <div class="pdf-modal-scroll-area">
+                <div id="pdf-preview-content" class="printable-report">
+                    <div class="report-header">
+                        <div class="report-header-left">
+                            <div class="report-brand">
+                                <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="pdfPreviewLeafGrad" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+                                            <stop offset="0%" stop-color="#10b981" />
+                                            <stop offset="100%" stop-color="#0284c7" />
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="100" cy="100" r="85" stroke="#10b981" stroke-width="8" stroke-dasharray="16 16" />
+                                    <path d="M100 30 C50 70 40 130 100 170" stroke="url(#pdfPreviewLeafGrad)" stroke-width="12" stroke-linecap="round" />
+                                    <path d="M100 30 C150 70 160 130 100 170" stroke="url(#pdfPreviewLeafGrad)" stroke-width="12" stroke-linecap="round" />
+                                    <path d="M100 30 L100 170" stroke="url(#pdfPreviewLeafGrad)" stroke-width="8" stroke-linecap="round" />
+                                </svg>
+                                <h2>RoboSense Monitor</h2>
+                            </div>
+                            <p class="report-subtitle">Preview your report before downloading the final PDF file.</p>
+                        </div>
+                        <div class="report-header-right">
+                            <div class="report-meta-item"><strong>Session:</strong> <span id="report-meta-session">All Sessions</span></div>
+                            <div class="report-meta-item"><strong>Generated:</strong> <span id="report-date-str">--</span></div>
+                        </div>
+                    </div>
+
+                    <div class="report-divider"></div>
+
+                    <div class="report-section-title">Telemetry Analytics Summary</div>
+                    <div class="report-stats-grid">
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Total Readings</div>
+                            <div class="report-stat-value" id="report-stat-total">0</div>
+                        </div>
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Soil Moisture</div>
+                            <div class="report-stat-value" id="report-stat-avg-soil">0.0 %</div>
+                        </div>
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Temperature</div>
+                            <div class="report-stat-value" id="report-stat-avg-temp">0.0 °C</div>
+                        </div>
+                        <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Humidity</div>
+                            <div class="report-stat-value" id="report-stat-avg-humidity">0.0 %</div>
+                        </div>
+                    </div>
+
+                    <div class="report-section-title">Raw Telemetry Records</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Timestamp</th>
+                                <th>Soil Moisture</th>
+                                <th>Temperature</th>
+                                <th>Humidity</th>
+                                <th>Status</th>
+                                <th>Flag</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pdf-report-table-body">
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:16px; color: var(--text-muted);">Preview will appear here once data is loaded.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="pdf-modal-actions">
+                <button class="pdf-btn pdf-btn-secondary" onclick="closePDFPreview()">Close</button>
+                <button class="pdf-btn pdf-btn-primary" onclick="downloadPDF()">Download PDF</button>
             </div>
         </div>
     </div>
