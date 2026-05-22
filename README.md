@@ -115,8 +115,11 @@ git push -u origin staging
 
 ---
 
-## Intelligent Simulator Fallback Mode
-If you do not have physical Arduino hardware connected or the designated `COM3` port is not currently connected to your computer:
-* **The system will automatically switch to Simulated Fallback Mode.**
-* It will generate high-fidelity, drifting climatic sensor logs to mock realistic weather/moisture progressions.
-* These simulated records are automatically inserted into MySQL every 2 seconds, allowing you to fully interact with charts, statistics, logs, and delta trends out-of-the-box!
+## Hardware-Only Telemetry Mode
+This system is configured to record sensor readings only from the physical Arduino and HC-05 Bluetooth connection on `COM7`.
+
+If no hardware is connected:
+* The system displays an offline connection state.
+* Live telemetry cards show empty readings.
+* No new sensor records are inserted into MySQL.
+* Existing historical database logs remain available for review.
