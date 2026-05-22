@@ -57,6 +57,16 @@ Soil Moisture Sensor + DHT11 (Temp/Humidity) + RGB LED
 Ensure MySQL is active in your XAMPP Control Panel (or default local instance on Port `3306`).
 * *Note: The Python backend automatically handles creating the database `robosense_db` and its table `sensor_readings` on startup. You do not need to create them manually!*
 
+### Database Compliance Note
+The project guideline references SQLite database or CSV file storage. This implementation uses **MySQL** as the primary persistent database layer. CSV export is available for reporting, but runtime sensor readings are stored in MySQL.
+
+A reviewable schema artifact is included at:
+```text
+database/schema.sql
+```
+
+You may import this file manually through phpMyAdmin or the MySQL CLI, or let `python app.py` create the database and table automatically.
+
 ### 2. Configure Settings (Optional)
 Open [app.py](file:///D:/xampp_latest/htdocs/IoT/app.py) in your editor and adjust configuration constants at the top:
 ```python
