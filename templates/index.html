@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
     <style>
         /* ==========================================
            DESIGN SYSTEM & COLOR TOKENS (LIGHT GLASS SPEC)
@@ -1215,7 +1216,7 @@
            ========================================== */
         .sensor-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: 2fr 1fr 1fr;
             gap: 24px;
         }
 
@@ -1227,6 +1228,16 @@
             min-height: 175px;
             position: relative;
             overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .card-soil {
+            cursor: pointer;
+        }
+
+        .card-soil:hover {
+            transform: translateY(-3px) scale(1.015);
+            box-shadow: 0 12px 30px rgba(15, 118, 110, 0.12);
         }
 
         /* Glowing Accent Borders */
@@ -1579,7 +1590,8 @@
             display: flex;
             flex-direction: column;
             flex-grow: 1;
-            height: 520px;
+            min-height: 480px;
+            height: auto;
         }
 
         .chart-header {
@@ -1922,6 +1934,305 @@
             font-weight: 700;
         }
 
+        /* ==========================================
+           DYNAMIC CHART STATUS & THRESHOLD STRIP (INTERACTIVE EXPLORER)
+           ========================================== */
+        .chart-status-strip {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .status-strip-header {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-strip-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.2px;
+        }
+
+        .status-strip-subtitle {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .status-strip-explorer {
+            display: grid;
+            grid-template-columns: 1fr 3fr;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .explorer-live-card {
+            background: rgba(15, 23, 42, 0.02);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .explorer-card-label {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .explorer-live-val {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            letter-spacing: -1px;
+        }
+
+        .explorer-zones {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .threshold-card {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .threshold-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            border-color: var(--text-muted);
+        }
+
+        .threshold-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .threshold-card-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .threshold-card-range {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .threshold-card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Highlight states when card matches live reading */
+        .threshold-card.live-state {
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.04);
+        }
+
+        /* Color classes for selected & live cards */
+        .threshold-card.selected {
+            background-color: rgba(15, 23, 42, 0.01);
+            border-width: 2px;
+        }
+
+        .threshold-card.zone-dry.selected {
+            border-color: var(--color-critical);
+            background-color: rgba(153, 27, 27, 0.02);
+        }
+        .threshold-card.zone-dry.live-state {
+            border-color: var(--color-critical);
+        }
+        .threshold-card.zone-dry .threshold-card-dot {
+            background-color: var(--color-critical);
+        }
+
+        .threshold-card.zone-optimal.selected {
+            border-color: var(--color-emerald);
+            background-color: rgba(22, 101, 52, 0.02);
+        }
+        .threshold-card.zone-optimal.live-state {
+            border-color: var(--color-emerald);
+        }
+        .threshold-card.zone-optimal .threshold-card-dot {
+            background-color: var(--color-emerald);
+        }
+
+        .threshold-card.zone-wet.selected {
+            border-color: var(--color-cyan);
+            background-color: rgba(3, 105, 161, 0.02);
+        }
+        .threshold-card.zone-wet.live-state {
+            border-color: var(--color-cyan);
+        }
+        .threshold-card.zone-wet .threshold-card-dot {
+            background-color: var(--color-cyan);
+        }
+
+        .threshold-card.zone-cool.selected {
+            border-color: var(--color-cyan);
+            background-color: rgba(3, 105, 161, 0.02);
+        }
+        .threshold-card.zone-cool.live-state {
+            border-color: var(--color-cyan);
+        }
+        .threshold-card.zone-cool .threshold-card-dot {
+            background-color: var(--color-cyan);
+        }
+
+        .threshold-card.zone-hot.selected {
+            border-color: var(--color-critical);
+            background-color: rgba(153, 27, 27, 0.02);
+        }
+        .threshold-card.zone-hot.live-state {
+            border-color: var(--color-critical);
+        }
+        .threshold-card.zone-hot .threshold-card-dot {
+            background-color: var(--color-critical);
+        }
+
+        .threshold-card.zone-warn.selected {
+            border-color: var(--color-warn);
+            background-color: rgba(146, 64, 14, 0.02);
+        }
+        .threshold-card.zone-warn.live-state {
+            border-color: var(--color-warn);
+        }
+        .threshold-card.zone-warn .threshold-card-dot {
+            background-color: var(--color-warn);
+        }
+
+        /* Live state pulse badge */
+        .live-badge {
+            background-color: var(--text-main);
+            color: #ffffff;
+            font-size: 8px;
+            font-weight: 800;
+            padding: 2px 5px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .live-badge-dot {
+            width: 4px;
+            height: 4px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            animation: pulse-light 1.5s infinite;
+        }
+
+        @keyframes pulse-light {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        .status-strip-divider {
+            height: 1px;
+            background: var(--border-color);
+            opacity: 0.6;
+            margin: 4px 0;
+        }
+
+        .status-strip-details {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.015);
+            border: 1px solid rgba(15, 23, 42, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .detail-zone-indicator {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 20px;
+        }
+
+        .detail-column {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .detail-column-label {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-column-text {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        @media (max-width: 968px) {
+            .status-strip-explorer {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .explorer-zones {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .detail-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+
         .legend-indicator-stats {
             display: flex;
             align-items: center;
@@ -1951,6 +2262,435 @@
             font-weight: 800;
         }
 
+        /* Custom layout for enlarged Soil Moisture Card */
+        .soil-card-layout {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .soil-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-grow: 1;
+        }
+
+        .soil-status-text {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--color-mint);
+            text-transform: uppercase;
+        }
+
+        .soil-hint-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .soil-card-stats {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            width: 180px;
+        }
+        
+        .soil-card-stats .stat-pill {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 6px;
+            flex: 1;
+        }
+
+        .badge-mint {
+            background-color: #e6fcf5;
+            color: #0f766e;
+            border: 1.5px solid #96f2d7;
+        }
+
+        /* ==========================================
+           SOIL MOISTURE TELEMETRY COCKPIT MODAL STYLING
+           ========================================== */
+        .soil-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(8px);
+            z-index: 250;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .soil-modal-card {
+            background: #ffffff;
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 950px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+            overflow: hidden;
+            animation: modal-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .soil-modal-header {
+            padding: 18px 28px;
+            border-bottom: 1.5px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+
+        .soil-modal-header h3 {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .soil-modal-subtitle {
+            font-size: 11px;
+            color: var(--color-mint);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+            display: block;
+        }
+
+        .soil-close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .soil-close-btn:hover {
+            color: var(--color-critical);
+        }
+
+        .soil-modal-scroll-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #f1f5f9;
+        }
+
+        .soil-modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .soil-modal-col-left, .soil-modal-col-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+
+        /* Left Column Cards */
+        .modal-vis-card {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 480px;
+        }
+
+        .modal-large-gauge-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-gauge-svg {
+            transform: rotate(-90deg);
+        }
+
+        .modal-gauge-content {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .water-droplet-icon {
+            color: var(--color-mint);
+            margin-bottom: 4px;
+            animation: droplet-float 3s infinite ease-in-out;
+        }
+
+        @keyframes droplet-float {
+            0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(15, 118, 110, 0)); }
+            50% { transform: translateY(-6px) scale(1.05); filter: drop-shadow(0 4px 8px rgba(15, 118, 110, 0.3)); }
+            100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(15, 118, 110, 0)); }
+        }
+
+        .modal-gauge-value {
+            font-family: var(--font-mono);
+            font-size: 38px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .modal-gauge-status {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-top: 6px;
+            padding: 2.5px 10px;
+            border-radius: 12px;
+        }
+
+        .modal-irrigation-card {
+            width: 100%;
+            background-color: #f8fafc;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            text-align: left;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.02);
+        }
+
+        .irrigation-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .irrigation-desc {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        /* Right Column Cards */
+        .modal-chart-card, .modal-simulator-card, .modal-log-card {
+            padding: 20px;
+        }
+
+        .modal-section-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .modal-chart-container {
+            position: relative;
+            height: 160px;
+            width: 100%;
+        }
+
+        /* Calibration Simulator CSS */
+        .simulator-slider-group {
+            background-color: #f8fafc;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .simulator-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #cbd5e1;
+            outline: none;
+            border: 1px solid #cbd5e1;
+        }
+
+        .simulator-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--color-mint);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(15, 118, 110, 0.4);
+            border: 2px solid #ffffff;
+            transition: transform 0.1s ease;
+        }
+
+        .simulator-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .reset-simulator-btn {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--color-critical);
+            background: #fef2f2;
+            border: 1.5px solid #fca5a5;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reset-simulator-btn:hover {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #ef4444;
+        }
+
+        /* Modal Table Styling */
+        .modal-log-table-container {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .modal-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }
+
+        .modal-log-table th {
+            padding: 8px 10px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        .modal-log-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #cbd5e1;
+            color: var(--text-muted);
+        }
+
+        .modal-log-table tbody tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        .soil-modal-actions {
+            padding: 16px 28px;
+            border-top: 1.5px solid #cbd5e1;
+            display: flex;
+            justify-content: flex-end;
+            background: #f8fafc;
+        }
+
+        .soil-btn {
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-family: var(--font-sans);
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+        }
+
+        .soil-btn-primary {
+            background: linear-gradient(135deg, #0f766e, #0d9488);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(15, 118, 110, 0.2);
+        }
+
+        .soil-btn-primary:hover {
+            background: linear-gradient(135deg, #0d9488, #115e59);
+            box-shadow: 0 6px 20px rgba(15, 118, 110, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Color classes for modal gauge */
+        .color-mint-stroke {
+            stroke: var(--color-mint) !important;
+        }
+        .color-blue-stroke {
+            stroke: #0284c7 !important;
+        }
+        .color-warn-stroke {
+            stroke: var(--color-warn) !important;
+        }
+        .color-critical-stroke {
+            stroke: var(--color-critical) !important;
+        }
+
+        /* Responsive Layouts */
+        @media (max-width: 968px) {
+            .sensor-grid {
+                grid-template-columns: 1fr !important;
+                gap: 16px;
+            }
+            .overview-two-col {
+                grid-template-columns: 1fr !important;
+                gap: 16px;
+            }
+        }
+
+        /* Responsive Modal Grid */
+        @media (max-width: 900px) {
+            .soil-modal-grid {
+                grid-template-columns: 1fr;
+            }
+            .modal-vis-card {
+                min-height: auto;
+                padding: 20px;
+            }
+            .soil-modal-card {
+                height: 95vh;
+            }
+        }
 
     </style>
 </head>
@@ -2044,6 +2784,35 @@
                     <span>SYSTEM CORE TELEMETRY TRACKS</span>
                 </div>
                 
+                <div class="showcase-card shadow-card-soil">
+                    <div class="showcase-icon icon-soil">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M5 12h14M19 12a7 7 0 01-7 7M5 12a7 7 0 017-7" />
+                        </svg>
+                    </div>
+                    <div class="showcase-card-content">
+                        <h4>Soil Hydration</h4>
+                        <p>Sub-surface capacitive moisture mapping and safety warning indicators.</p>
+                        <span class="showcase-badge badge-soil">20% - 80% Optimal</span>
+                    </div>
+                    <!-- Mock Sparkline Vector decoration -->
+                    <div class="showcase-card-visual">
+                        <svg width="60" height="30" viewBox="0 0 60 30" fill="none">
+                            <path d="M0 15 C10 22, 18 8, 32 18 C42 28, 48 5, 60 12" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" />
+                            <path d="M0 15 C10 22, 18 8, 32 18 C42 28, 48 5, 60 12 L60 30 L0 30 Z" fill="url(#soilVisualGrad)" opacity="0.06" />
+                            <circle cx="60" cy="12" r="3.5" fill="#0f766e" />
+                        </svg>
+                        <svg style="position:absolute; width:0; height:0;">
+                            <defs>
+                                <linearGradient id="soilVisualGrad" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#0f766e" />
+                                    <stop offset="100%" stop-color="#0f766e" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+
                 <div class="showcase-card shadow-card-temp">
                     <div class="showcase-icon icon-temp">
                         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -2096,35 +2865,6 @@
                                 <linearGradient id="humVisualGrad" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
                                     <stop offset="0%" stop-color="#15803d" />
                                     <stop offset="100%" stop-color="#15803d" stop-opacity="0" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="showcase-card shadow-card-soil">
-                    <div class="showcase-icon icon-soil">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M5 12h14M19 12a7 7 0 01-7 7M5 12a7 7 0 017-7" />
-                        </svg>
-                    </div>
-                    <div class="showcase-card-content">
-                        <h4>Soil Hydration</h4>
-                        <p>Sub-surface capacitive moisture mapping and safety warning indicators.</p>
-                        <span class="showcase-badge badge-soil">20% - 80% Optimal</span>
-                    </div>
-                    <!-- Mock Sparkline Vector decoration -->
-                    <div class="showcase-card-visual">
-                        <svg width="60" height="30" viewBox="0 0 60 30" fill="none">
-                            <path d="M0 15 C10 22, 18 8, 32 18 C42 28, 48 5, 60 12" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" />
-                            <path d="M0 15 C10 22, 18 8, 32 18 C42 28, 48 5, 60 12 L60 30 L0 30 Z" fill="url(#soilVisualGrad)" opacity="0.06" />
-                            <circle cx="60" cy="12" r="3.5" fill="#0f766e" />
-                        </svg>
-                        <svg style="position:absolute; width:0; height:0;">
-                            <defs>
-                                <linearGradient id="soilVisualGrad" x1="0" y1="0" x2="0" y2="30" gradientUnits="userSpaceOnUse">
-                                    <stop offset="0%" stop-color="#0f766e" />
-                                    <stop offset="100%" stop-color="#0f766e" stop-opacity="0" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -2263,6 +3003,44 @@
             <!-- ZONE 2: SENSOR CARDS GRID -->
             <div class="sensor-grid">
                 
+                <!-- Soil Moisture Card (With SVG Ring) - CLICKABLE FOR DETAILS COCKPIT -->
+                <div class="glass-card sensor-card card-soil" onclick="openSoilModal()">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="card-title">Soil Moisture Main Focus</span>
+                            <span class="badge badge-mint" style="font-size: 9px; padding: 2px 6px; font-weight:700;">Cockpit Mode</span>
+                        </div>
+                        <span class="trend-badge trend-stable" id="soil-trend">──</span>
+                    </div>
+                    <div class="card-body-metrics soil-card-layout">
+                        <div class="soil-gauge-container">
+                            <svg class="gauge-svg" width="105" height="105" viewBox="0 0 110 110">
+                                <circle class="gauge-bg" cx="55" cy="55" r="48" stroke-width="7"></circle>
+                                <circle class="gauge-progress" id="soil-gauge-progress" cx="55" cy="55" r="48" stroke-width="7"></circle>
+                            </svg>
+                            <div class="gauge-text" id="soil-readout" style="font-size: 20px;">--%</div>
+                        </div>
+                        <div class="soil-card-info">
+                            <span class="soil-status-text" id="soil-status-text">Awaiting Ingestion...</span>
+                            <span class="soil-hint-text">Click card for detail telemetry cockpit</span>
+                        </div>
+                        <div class="soil-card-stats">
+                            <div class="stat-pill">
+                                <span>Min</span>
+                                <strong id="soil-min">--%</strong>
+                            </div>
+                            <div class="stat-pill">
+                                <span>Avg</span>
+                                <strong id="soil-avg">--%</strong>
+                            </div>
+                            <div class="stat-pill">
+                                <span>Max</span>
+                                <strong id="soil-max">--%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Temperature Card -->
                 <div class="glass-card sensor-card card-temp">
                     <div class="card-header">
@@ -2309,34 +3087,6 @@
                         <div class="stat-pill">
                             <span class="stat-pill-label">Max</span>
                             <span class="stat-pill-value" id="hum-max">--%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Soil Moisture Card (With SVG Ring) -->
-                <div class="glass-card sensor-card card-soil">
-                    <div class="card-header">
-                        <span class="card-title">Soil Moisture</span>
-                        <span class="trend-badge trend-stable" id="soil-trend">──</span>
-                    </div>
-                    <div class="card-body-metrics">
-                        <div class="soil-gauge-container">
-                            <svg class="gauge-svg" width="76" height="76" viewBox="0 0 80 80">
-                                <circle class="gauge-bg" cx="40" cy="40" r="35"></circle>
-                                <circle class="gauge-progress" id="soil-gauge-progress" cx="40" cy="40" r="35"></circle>
-                            </svg>
-                            <div class="gauge-text" id="soil-readout">--%</div>
-                        </div>
-                        <div style="flex-grow:1; padding-left:18px; display:flex; flex-direction:column; gap:6px;">
-                            <div class="stat-pill" style="flex-direction:row; justify-content:space-between; padding:4px 8px; font-size:10.5px;">
-                                <span>Min:</span> <strong id="soil-min">--%</strong>
-                            </div>
-                            <div class="stat-pill" style="flex-direction:row; justify-content:space-between; padding:4px 8px; font-size:10.5px;">
-                                <span>Avg:</span> <strong id="soil-avg">--%</strong>
-                            </div>
-                            <div class="stat-pill" style="flex-direction:row; justify-content:space-between; padding:4px 8px; font-size:10.5px;">
-                                <span>Max:</span> <strong id="soil-max">--%</strong>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -2425,9 +3175,9 @@
                         <span class="chart-subtitle">Historical visualization grid (last 30 samples)</span>
                     </div>
                     <div class="chart-tabs">
-                        <button class="tab-btn active" id="tab-temp" onclick="switchChartTab('temp')">Temperature</button>
+                        <button class="tab-btn active" id="tab-soil" onclick="switchChartTab('soil')">Soil Moisture</button>
+                        <button class="tab-btn" id="tab-temp" onclick="switchChartTab('temp')">Temperature</button>
                         <button class="tab-btn" id="tab-humidity" onclick="switchChartTab('humidity')">Humidity</button>
-                        <button class="tab-btn" id="tab-soil" onclick="switchChartTab('soil')">Soil Moisture</button>
                     </div>
                 </div>
                 
@@ -2442,6 +3192,49 @@
                     <canvas id="trendsChart"></canvas>
                     <div id="chart-no-data-placeholder" class="chart-placeholder">
                         No historical data available. Environmental trends will plot here in real-time once telemetry begins.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Safety Threshold & Live Value Status Strip (Interactive Explorer) -->
+            <div class="glass-card chart-status-strip" id="chart-status-strip">
+                <div class="status-strip-header">
+                    <h4 class="status-strip-title">Agronomic Interpretation Explorer</h4>
+                    <p class="status-strip-subtitle">Select a threshold card below to explore ecological determination and live crop impact.</p>
+                </div>
+                
+                <div class="status-strip-explorer">
+                    <!-- Live Ingestion Info -->
+                    <div class="explorer-live-card">
+                        <span class="explorer-card-label">Live Ingestion</span>
+                        <div class="explorer-live-val" id="explorer-live-val">--.-%</div>
+                        <span class="badge" id="explorer-live-badge">Awaiting...</span>
+                    </div>
+                    
+                    <!-- Interactive Zone Cards Container -->
+                    <div class="explorer-zones" id="explorer-zones-container">
+                        <div style="grid-column: span 3; text-align:center; padding: 24px; color: var(--text-muted); font-size:11.5px; font-weight:500;">
+                            Awaiting telemetry stream...
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-strip-divider"></div>
+                
+                <!-- Dynamic Detail Display Panel -->
+                <div class="status-strip-details" id="status-strip-details-panel">
+                    <div class="detail-header">
+                        <span class="detail-zone-indicator" id="detail-zone-title">Select a zone above to inspect</span>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-column">
+                            <span class="detail-column-label">Ecological Determination</span>
+                            <p class="detail-column-text" id="detail-determination-text">Please wait for real-time sensor data.</p>
+                        </div>
+                        <div class="detail-column">
+                            <span class="detail-column-label">Agronomic Impact & Action</span>
+                            <p class="detail-column-text" id="detail-impact-text">Please wait for real-time sensor data.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2475,9 +3268,9 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Timestamp</th>
+                                <th>Soil Moisture (%)</th>
                                 <th>Temp (°C)</th>
                                 <th>Humidity (%)</th>
-                                <th>Soil Moisture (%)</th>
                                 <th>Status</th>
                                 <th>Alert Flag</th>
                             </tr>
@@ -2503,7 +3296,7 @@
     <script>
         // Global variables
         let chartInstance = null;
-        let currentChartTab = 'temp'; // 'temp', 'humidity', 'soil'
+        let currentChartTab = 'soil'; // 'temp', 'humidity', 'soil'
         
         // Cache historical data locally for tab switching
         let localHistoryCache = [];
@@ -2514,6 +3307,185 @@
             humidity: null,
             soil: null
         };
+
+        // Selected interpretation threshold zone key
+        let selectedZoneKey = null;
+
+        // Interactive Threshold Zones Metadata
+        const metricZonesData = {
+            soil: [
+                {
+                    key: 'dry',
+                    title: 'Critical Dry Zone',
+                    rangeText: 'Under 20%',
+                    class: 'zone-dry',
+                    minVal: 0,
+                    maxVal: 20,
+                    determination: 'Soil moisture is critically low at {val}% (<20%), which is below the Permanent Wilting Point. At this level, soil particle tension exceeds the water potential of root cells, preventing water extraction.',
+                    impact: 'Permanent Wilting. Root cells cannot draw water, stomata close to prevent desiccation, halting photosynthesis. Activate irrigation immediately.'
+                },
+                {
+                    key: 'optimal',
+                    title: 'Optimal Growing Zone',
+                    rangeText: '20% - 80%',
+                    class: 'zone-optimal',
+                    minVal: 20,
+                    maxVal: 80,
+                    determination: 'Soil moisture is in the optimal range of {val}% (20% - 80%). The soil maintains a perfect balance of plant-available water in micro-pores and essential air/oxygen in macro-pores.',
+                    impact: 'Healthy Growth. Supports cellular turgor, root respiration, and efficient dissolution/absorption of key macro-nutrients (N, P, K).'
+                },
+                {
+                    key: 'wet',
+                    title: 'Saturation Zone',
+                    rangeText: 'Over 80%',
+                    class: 'zone-wet',
+                    minVal: 80,
+                    maxVal: 100,
+                    determination: 'Soil is saturated at {val}% (>80%), exceeding Field Capacity. All soil pores are filled with water, completely blocking atmospheric oxygen transport to the roots.',
+                    impact: 'Root Anoxia (Drowning). Roots cannot respire, halting nutrient uptake. Prolonged saturation causes root rot and chlorosis. Drainage is required.'
+                }
+            ],
+            temp: [
+                {
+                    key: 'cool',
+                    title: 'Cool Zone',
+                    rangeText: 'Under 18°C',
+                    class: 'zone-cool',
+                    minVal: 10,
+                    maxVal: 18,
+                    determination: 'Air temperature is cool at {val}°C (<18°C). Enzymatic and metabolic activities decelerate, reducing cell expansion and slowing overall vegetative growth.',
+                    impact: 'Metabolic Deceleration. Reduced transpiration limits calcium and boron translocation. If greenhouse, activate heating.'
+                },
+                {
+                    key: 'optimal',
+                    title: 'Optimal Range',
+                    rangeText: '18°C - 30°C',
+                    class: 'zone-optimal',
+                    minVal: 18,
+                    maxVal: 30,
+                    determination: 'Air temperature is optimal at {val}°C (18°C - 30°C). Photosynthetic enzymes operate at peak efficiency, and carbon assimilation is maximized.',
+                    impact: 'Peak Assimilation. Stomata stay open for steady CO2 exchange while transpiration maintains leaf temperature. No action needed.'
+                },
+                {
+                    key: 'hot',
+                    title: 'Heat Stress Zone',
+                    rangeText: 'Over 30°C',
+                    class: 'zone-hot',
+                    minVal: 30,
+                    maxVal: 45,
+                    determination: 'Air temperature is high at {val}°C (>30°C). Plant respiration rates spike, consuming stored sugars faster than photosynthesis can produce them.',
+                    impact: 'Thermal Heat Stress. Stomata close to prevent desiccation, stopping growth. High risk of leaf scorch. Activate ventilation or misting.'
+                }
+            ],
+            humidity: [
+                {
+                    key: 'dry',
+                    title: 'Dry Air Zone',
+                    rangeText: 'Under 30%',
+                    class: 'zone-dry',
+                    minVal: 0,
+                    maxVal: 30,
+                    determination: 'Relative humidity is low at {val}% (<30%), causing a high Vapor Pressure Deficit (VPD). The dry air draws moisture rapidly from leaf tissue.',
+                    impact: 'High Vapor Deficit (VPD). Leaf desiccation risk. If roots cannot match transpiration demand, hydraulic shock occurs. Activate humidifiers.'
+                },
+                {
+                    key: 'optimal',
+                    title: 'Optimal Humidity',
+                    rangeText: '30% - 60%',
+                    class: 'zone-optimal',
+                    minVal: 30,
+                    maxVal: 60,
+                    determination: 'Relative humidity is in the optimal range of {val}% (30% - 60%). This maintains a moderate VPD, allowing steady, controlled transpiration.',
+                    impact: 'Balanced Transpiration. Efficient nutrient transport (e.g. Calcium) from roots to growing shoots with low foliar disease pressure.'
+                },
+                {
+                    key: 'wet',
+                    title: 'High Moisture Zone',
+                    rangeText: 'Over 60%',
+                    class: 'zone-wet',
+                    minVal: 60,
+                    maxVal: 100,
+                    determination: 'Relative humidity is high at {val}% (>60%), causing a very low Vapor Pressure Deficit (VPD). Evaporation from leaves slows to a halt.',
+                    impact: 'Pathogen & Stagnation Risk. Evaporation halts, stopping calcium uptake (blossom end rot risk). Fungal pathogen risk spikes. Increase ventilation.'
+                }
+            ]
+        };
+
+        // Render interactive threshold zone cards
+        function renderExplorerZones(metricType, currentVal) {
+            const zones = metricZonesData[metricType];
+            const container = document.getElementById('explorer-zones-container');
+            if (!container) return;
+
+            // Determine which zone is the live one
+            let liveZoneKey = null;
+            if (currentVal !== undefined && currentVal !== null) {
+                const zoneObj = zones.find(z => currentVal >= z.minVal && currentVal < z.maxVal);
+                if (zoneObj) {
+                    liveZoneKey = zoneObj.key;
+                } else if (currentVal >= zones[zones.length - 1].maxVal) {
+                    liveZoneKey = zones[zones.length - 1].key;
+                }
+            }
+
+            // Fallback for selection if not valid
+            if (!selectedZoneKey || !zones.some(z => z.key === selectedZoneKey)) {
+                selectedZoneKey = liveZoneKey || zones[1].key;
+            }
+
+            let html = '';
+            zones.forEach(z => {
+                const isLive = z.key === liveZoneKey;
+                const isSelected = z.key === selectedZoneKey;
+                
+                const liveBadgeHTML = isLive ? `<span class="live-badge"><span class="live-badge-dot"></span>Live</span>` : '';
+                const selectedClass = isSelected ? 'selected' : '';
+                const liveClass = isLive ? 'live-state' : '';
+
+                html += `
+                    <div class="threshold-card ${z.class} ${selectedClass} ${liveClass}" onclick="selectExplorerZone('${metricType}', '${z.key}', ${currentVal})">
+                        <div class="threshold-card-header">
+                            <span class="threshold-card-range">${z.rangeText}</span>
+                            <span class="threshold-card-dot"></span>
+                        </div>
+                        <span class="threshold-card-title">${z.title}</span>
+                        ${liveBadgeHTML}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            updateExplorerDetails(metricType, currentVal, liveZoneKey);
+        }
+
+        // Toggle selected zone card
+        function selectExplorerZone(metricType, zoneKey, currentVal) {
+            selectedZoneKey = zoneKey;
+            renderExplorerZones(metricType, currentVal);
+        }
+
+        // Update explanation content for selected zone card
+        function updateExplorerDetails(metricType, currentVal, liveZoneKey) {
+            const zones = metricZonesData[metricType];
+            const zone = zones.find(z => z.key === selectedZoneKey);
+            const titleEl = document.getElementById('detail-zone-title');
+            const detEl = document.getElementById('detail-determination-text');
+            const impEl = document.getElementById('detail-impact-text');
+
+            if (!zone || !titleEl || !detEl || !impEl) return;
+
+            const isLive = (zone.key === liveZoneKey);
+            const unit = (metricType === 'temp' ? '°C' : '%');
+            
+            titleEl.innerHTML = `Inspecting: ${zone.title} (${zone.rangeText}) ${isLive ? '<span class="badge badge-mint" style="margin-left: 8px; font-size: 9px; vertical-align: middle;">Live State</span>' : ''}`;
+            
+            // Format templates with live or placeholder values
+            const formattedVal = (currentVal !== undefined && currentVal !== null) ? currentVal : null;
+            const valStr = formattedVal !== null ? formattedVal.toFixed(1) : '--';
+            
+            detEl.textContent = zone.determination.replace(/{val}/g, valStr);
+            impEl.textContent = zone.impact.replace(/{val}/g, valStr);
+        }
 
         // Switch View Navigation Tabs
         function switchView(viewId) {
@@ -2621,16 +3593,23 @@
         // Render Chart.js with cached or new data
         function renderChartData() {
             if (!chartInstance) return;
-            
+
             const placeholder = document.getElementById('chart-no-data-placeholder');
             const legendIndicator = document.getElementById('chart-legend-indicator');
             
+            const liveValEl = document.getElementById('explorer-live-val');
+            const liveBadgeEl = document.getElementById('explorer-live-badge');
+            const zonesCon = document.getElementById('explorer-zones-container');
+            const detTitleEl = document.getElementById('detail-zone-title');
+            const detEl = document.getElementById('detail-determination-text');
+            const impEl = document.getElementById('detail-impact-text');
+
             if (localHistoryCache.length === 0) {
                 chartInstance.data.labels = [];
                 chartInstance.data.datasets[0].data = [];
                 chartInstance.update();
                 if (placeholder) placeholder.classList.add('visible');
-                
+
                 if (legendIndicator) {
                     legendIndicator.innerHTML = `
                         <div style="text-align:center; width:100%; color:var(--text-muted); font-size:11.5px; font-weight:500;">
@@ -2638,16 +3617,31 @@
                         </div>
                     `;
                 }
+                if (liveValEl) liveValEl.textContent = '--.-%';
+                if (liveBadgeEl) {
+                    liveBadgeEl.textContent = 'Awaiting...';
+                    liveBadgeEl.className = 'badge';
+                }
+                if (zonesCon) {
+                    zonesCon.innerHTML = `
+                        <div style="grid-column: span 3; text-align:center; padding: 24px; color: var(--text-muted); font-size:11.5px; font-weight:500;">
+                            Awaiting telemetry stream...
+                        </div>
+                    `;
+                }
+                if (detTitleEl) detTitleEl.textContent = 'Select a zone above to inspect';
+                if (detEl) detEl.textContent = 'Please wait for real-time sensor data.';
+                if (impEl) impEl.textContent = 'Please wait for real-time sensor data.';
                 return;
             }
-            
+
             if (placeholder) placeholder.classList.remove('visible');
-            
+
             const timestamps = localHistoryCache.map(d => {
                 const parts = d.timestamp.split(' ');
                 return parts.length > 1 ? parts[1] : d.timestamp;
             });
-            
+
             let datasetLabel = '';
             let datasetColor = '';
             let datasetBg = '';
@@ -2655,7 +3649,7 @@
             let unit = '';
             let optimalRangeText = '';
             let paramName = '';
-            
+
             if (currentChartTab === 'temp') {
                 datasetLabel = 'Temperature (°C)';
                 datasetColor = '#0284c7'; // Rich Blue-Cyan
@@ -2681,40 +3675,23 @@
                 optimalRangeText = 'Optimal: 20% - 80%';
                 paramName = 'Soil Moisture';
             }
-            
+
             chartInstance.data.labels = timestamps;
             chartInstance.data.datasets[0].label = datasetLabel;
             chartInstance.data.datasets[0].borderColor = datasetColor;
             chartInstance.data.datasets[0].backgroundColor = datasetBg;
             chartInstance.data.datasets[0].pointBackgroundColor = datasetColor;
             chartInstance.data.datasets[0].data = sensorValues;
-            
-            // Warning horizontal threshold for Temperature
-            if (currentChartTab === 'temp') {
-                chartInstance.options.plugins.annotation = {
-                    annotations: {
-                        line1: {
-                            type: 'line',
-                            yMin: 30,
-                            yMax: 30,
-                            borderColor: '#dc2626',
-                            borderWidth: 1.5,
-                            borderDash: [6, 6],
-                            label: {
-                                content: 'Warning Limit (30°C)',
-                                enabled: true,
-                                position: 'end',
-                                font: { family: 'Plus Jakarta Sans', size: 9, weight: 'bold' }
-                            }
-                        }
-                    }
-                };
-            } else {
-                if (chartInstance.options.plugins.annotation) {
-                    delete chartInstance.options.plugins.annotation;
-                }
+
+            // Clear any old annotations and scales overrides (keep graphs clean and unaffected)
+            if (chartInstance.options.plugins.annotation) {
+                delete chartInstance.options.plugins.annotation;
             }
-            
+            if (chartInstance.options.scales.y) {
+                delete chartInstance.options.scales.y.min;
+                delete chartInstance.options.scales.y.max;
+            }
+
             chartInstance.update();
 
             // Compute statistics dynamically for the active parameter from the 30 active samples
@@ -2746,18 +3723,56 @@
                     </div>
                 `;
             }
+
+            // Update Interactive Explorer Ingestion Value
+            if (sensorValues.length > 0) {
+                const latestVal = sensorValues[sensorValues.length - 1];
+                
+                let statusText = '';
+                let badgeClass = '';
+                
+                if (currentChartTab === 'soil') {
+                    if (latestVal < 20) { statusText = 'CRITICAL DRY'; badgeClass = 'badge-red'; }
+                    else if (latestVal > 80) { statusText = 'SATURATED'; badgeClass = 'badge-amber'; }
+                    else { statusText = 'OPTIMAL'; badgeClass = 'badge-green'; }
+                } else if (currentChartTab === 'temp') {
+                    if (latestVal < 18) { statusText = 'COOL'; badgeClass = 'badge-blue'; }
+                    else if (latestVal > 30) { statusText = 'HEAT STRESS'; badgeClass = 'badge-red'; }
+                    else { statusText = 'OPTIMAL'; badgeClass = 'badge-green'; }
+                } else if (currentChartTab === 'humidity') {
+                    if (latestVal < 30) { statusText = 'DRY AIR'; badgeClass = 'badge-amber'; }
+                    else if (latestVal > 60) { statusText = 'HIGH HUMIDITY'; badgeClass = 'badge-blue'; }
+                    else { statusText = 'OPTIMAL'; badgeClass = 'badge-green'; }
+                }
+
+                if (liveValEl) liveValEl.textContent = `${latestVal.toFixed(1)}${unit}`;
+                if (liveBadgeEl) {
+                    liveBadgeEl.textContent = statusText;
+                    liveBadgeEl.className = `badge ${badgeClass}`;
+                }
+
+                // Render the interactive threshold cards
+                renderExplorerZones(currentChartTab, latestVal);
+            }
+        }
+
+        // General Gauge Ring updater (dynamic radius/circumference)
+        function updateGaugeRing(circleId, percentage) {
+            const circle = document.getElementById(circleId);
+            if (!circle) return;
+            
+            const radius = circle.r.baseVal.value;
+            const circumference = 2 * Math.PI * radius;
+            circle.style.strokeDasharray = circumference;
+            const pct = Math.max(0, Math.min(100, percentage));
+            const offset = circumference - (pct / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
         }
 
         // Circular Gauge Ring updates
         function updateSoilGauge(percentage) {
-            const circle = document.getElementById('soil-gauge-progress');
-            if (!circle) return;
-            
-            const radius = circle.r.baseVal.value;
-            const circumference = 2 * Math.PI * radius; // 219.91
-            const pct = Math.max(0, Math.min(100, percentage));
-            const offset = circumference - (pct / 100) * circumference;
-            circle.style.strokeDashoffset = offset;
+            updateGaugeRing('soil-gauge-progress', percentage);
+            updateGaugeRing('modal-soil-gauge-progress', percentage);
         }
 
         // Format system uptime counter
@@ -2852,6 +3867,7 @@
                 document.getElementById('temp-readout').innerHTML = `--.-<span class="readout-unit">°C</span>`;
                 document.getElementById('hum-readout').innerHTML = `--<span class="readout-unit">%</span>`;
                 document.getElementById('soil-readout').textContent = `--%`;
+                document.getElementById('soil-status-text').textContent = "Awaiting Ingestion...";
                 
                 updateSoilGauge(0);
                 
@@ -2871,9 +3887,16 @@
             
             document.getElementById('temp-readout').innerHTML = `${temp.toFixed(1)}<span class="readout-unit">°C</span>`;
             document.getElementById('hum-readout').innerHTML = `${hum.toFixed(0)}<span class="readout-unit">%</span>`;
-            document.getElementById('soil-readout').textContent = `${soil.toFixed(0)}%`;
             
-            updateSoilGauge(soil);
+            // Update soil telemetry via centralized UI controller
+            if (!soilSimulationOverride) {
+                updateSoilUI(soil);
+                const slider = document.getElementById('soil-calibration-slider');
+                if (slider) {
+                    slider.value = Math.round(soil);
+                    document.getElementById('sim-slider-val').textContent = `${slider.value}%`;
+                }
+            }
             
             // Delta Calculations
             renderDeltaTrend('temp-trend', temp, prevValues.temp);
@@ -2900,6 +3923,48 @@
                 bannerTitle.textContent = 'Optimal System Operations';
                 bannerDesc.textContent = 'All microclimatic parameters are sitting perfectly inside standard normal ranges.';
                 bannerCon.className = 'glass-card status-banner optimal';
+            }
+
+            // Update the latest reading in the chart status strip
+            const statusStrip = document.getElementById('chart-status-strip');
+            if (statusStrip && data) {
+                let latestVal = 0;
+                let unit = '';
+                let statusText = '';
+                let badgeClass = '';
+
+                if (currentChartTab === 'soil') {
+                    latestVal = parseFloat(data.soil_pct);
+                    unit = '%';
+                    if (latestVal < 20) { statusText = 'CRITICAL DRY'; badgeClass = 'badge-red'; }
+                    else if (latestVal > 80) { statusText = 'SATURATED'; badgeClass = 'badge-amber'; }
+                    else { statusText = 'OPTIMAL'; badgeClass = 'badge-green'; }
+                } else if (currentChartTab === 'temp') {
+                    latestVal = parseFloat(data.temp_c);
+                    unit = '°C';
+                    if (latestVal < 18) { statusText = 'COOL'; badgeClass = 'badge-blue'; }
+                    else if (latestVal > 30) { statusText = 'HEAT STRESS'; badgeClass = 'badge-red'; }
+                    else { statusText = 'OPTIMAL'; badgeClass = 'badge-green'; }
+                } else if (currentChartTab === 'humidity') {
+                    latestVal = parseFloat(data.humidity_pct);
+                    unit = '%';
+                    if (latestVal < 30) { statusText = 'DRY AIR'; badgeClass = 'badge-amber'; }
+                    else if (latestVal > 60) { statusText = 'HIGH HUMIDITY'; badgeClass = 'badge-blue'; }
+                    else { statusText = 'OPTIMAL'; badgeClass = 'badge-green'; }
+                }
+
+                const liveValEl = document.getElementById('explorer-live-val');
+                const liveBadgeEl = document.getElementById('explorer-live-badge');
+                if (liveValEl && liveBadgeEl) {
+                    liveValEl.textContent = `${latestVal.toFixed(1)}${unit}`;
+                    liveBadgeEl.textContent = statusText;
+                    liveBadgeEl.className = `badge ${badgeClass}`;
+                    
+                    // Render the cards with the new value
+                    renderExplorerZones(currentChartTab, latestVal);
+                } else {
+                    renderChartData();
+                }
             }
         }
 
@@ -3017,9 +4082,9 @@
                             tr.innerHTML = `
                                 <td class="td-mono">${r.id}</td>
                                 <td class="td-mono">${r.timestamp}</td>
+                                <td class="td-mono">${parseFloat(r.soil_pct).toFixed(0)} %</td>
                                 <td class="td-mono">${parseFloat(r.temp_c).toFixed(1)} °C</td>
                                 <td class="td-mono">${parseFloat(r.humidity_pct).toFixed(0)} %</td>
-                                <td class="td-mono">${parseFloat(r.soil_pct).toFixed(0)} %</td>
                                 <td>
                                     <span class="status-pill-cell ${statusClass}">${r.status}</span>
                                 </td>
@@ -3046,7 +4111,7 @@
                                 miniItem.className = 'mini-log-item';
                                 miniItem.innerHTML = `
                                     <span style="color: var(--text-secondary); font-size: 11px;">#${r.id} (${r.timestamp.split(' ')[1]})</span>
-                                    <span style="font-weight: 500;">T: ${parseFloat(r.temp_c).toFixed(0)}° | S: ${parseFloat(r.soil_pct).toFixed(0)}%</span>
+                                    <span style="font-weight: 500;">S: ${parseFloat(r.soil_pct).toFixed(0)}% | T: ${parseFloat(r.temp_c).toFixed(0)}° | H: ${parseFloat(r.humidity_pct).toFixed(0)}%</span>
                                     <span class="mini-log-status" style="background-color: ${statusPillColor}; color: ${statusTextColor};">${r.status}</span>
                                 `;
                                 miniLogsContainer.appendChild(miniItem);
@@ -3097,10 +4162,10 @@
                     if (res.status === 'SUCCESS' && res.data && res.data.length > 0) {
                         const data = res.data;
                         let csvContent = "data:text/csv;charset=utf-8,";
-                        csvContent += "ID,Timestamp,Temperature (C),Humidity (%),Soil Moisture (%),Status,Alert Flag\n";
+                        csvContent += "ID,Timestamp,Soil Moisture (%),Temperature (C),Humidity (%),Status,Alert Flag\n";
                         
                         data.forEach(r => {
-                            csvContent += `${r.id},${r.timestamp},${r.temp_c},${r.humidity_pct},${r.soil_pct},${r.status},${r.flag}\n`;
+                            csvContent += `${r.id},${r.timestamp},${r.soil_pct},${r.temp_c},${r.humidity_pct},${r.status},${r.flag}\n`;
                         });
                         
                         const encodedUri = encodeURI(csvContent);
@@ -3247,9 +4312,9 @@
                             tr.innerHTML = `
                                 <td class="mono bold" style="color: #64748b; text-align: left;">#${r.id}</td>
                                 <td class="mono" style="text-align: left;">${r.timestamp}</td>
+                                <td class="mono bold" style="text-align: center;">${soilVal}%</td>
                                 <td class="mono bold" style="text-align: center;">${tempVal} °C</td>
                                 <td class="mono bold" style="text-align: center;">${humVal}%</td>
-                                <td class="mono bold" style="text-align: center;">${soilVal}%</td>
                                 <td style="text-align: center;">
                                     <span class="status-pill-print" style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; background-color: ${statusBg}; color: ${statusColor}; border: 1.5px solid ${statusBorder};">
                                         ${r.status}
@@ -3286,6 +4351,258 @@
             window.print();
         }
 
+        // ==========================================
+        // SOIL MOISTURE COCKPIT MODAL CONTROLLER
+        // ==========================================
+        let modalSoilChartInstance = null;
+        let soilSimulationOverride = false;
+        let soilSimulationValue = 50;
+
+        function updateSoilUI(soilVal, isOverride = false) {
+            const val = Math.max(0, Math.min(100, parseFloat(soilVal)));
+            
+            // Update gauges
+            const readout = document.getElementById('soil-readout');
+            if (readout) readout.textContent = `${val.toFixed(0)}%`;
+            updateSoilGauge(val);
+            
+            const modalReadout = document.getElementById('modal-soil-readout');
+            if (modalReadout) modalReadout.textContent = `${val.toFixed(0)}%`;
+            
+            // Determine status text, recommendations, colors
+            let statusText = "";
+            let statusClass = "";
+            let recommendation = "";
+            let circleClass = "";
+            
+            if (val < 20) {
+                statusText = "CRITICAL DRY";
+                statusClass = "badge-red";
+                circleClass = "color-critical-stroke";
+                recommendation = "<strong>Soil is critically dry!</strong> The moisture level of " + val.toFixed(1) + "% is below the safety threshold of 20%. Active root stress detected. <strong>Action:</strong> Immediately initiate full irrigation cycle.";
+            } else if (val > 80) {
+                statusText = "Saturate / Wet";
+                statusClass = "badge-amber";
+                circleClass = "color-blue-stroke";
+                recommendation = "<strong>Soil is highly saturated!</strong> Current moisture level is " + val.toFixed(1) + "%. Oversaturated soil restricts oxygen to roots, leading to root rot. <strong>Action:</strong> Suspend all irrigation immediately until moisture drops.";
+            } else {
+                statusText = "Optimal Hydration";
+                statusClass = "badge-green";
+                circleClass = "color-mint-stroke";
+                recommendation = "<strong>Soil hydration is optimal.</strong> Current level of " + val.toFixed(1) + "% is perfectly situated in the healthy growth zone (20% - 80%). <strong>Action:</strong> Continue standard automatic scheduler.";
+            }
+            
+            // Apply to elements
+            const dbStatusText = document.getElementById('soil-status-text');
+            if (dbStatusText) dbStatusText.textContent = statusText;
+            
+            const modalBadge = document.getElementById('modal-soil-status-badge');
+            if (modalBadge) {
+                modalBadge.textContent = statusText;
+                modalBadge.className = `modal-gauge-status badge ${statusClass}`;
+            }
+            
+            const modalRec = document.getElementById('modal-soil-recommendation');
+            if (modalRec) {
+                modalRec.innerHTML = recommendation;
+            }
+            
+            const modalCircle = document.getElementById('modal-soil-gauge-progress');
+            if (modalCircle) {
+                modalCircle.classList.remove('color-mint-stroke', 'color-blue-stroke', 'color-warn-stroke', 'color-critical-stroke');
+                modalCircle.classList.add(circleClass);
+            }
+            
+            const dbCircle = document.getElementById('soil-gauge-progress');
+            if (dbCircle) {
+                dbCircle.classList.remove('color-mint-stroke', 'color-blue-stroke', 'color-warn-stroke', 'color-critical-stroke');
+                dbCircle.classList.add(circleClass);
+            }
+        }
+
+        function openSoilModal() {
+            const modal = document.getElementById('soil-detail-modal');
+            if (!modal) return;
+            
+            modal.style.display = 'flex';
+            
+            // Sync connection badge
+            const globalConn = document.getElementById('connection-badge').textContent;
+            const modalConn = document.getElementById('modal-connection-badge');
+            if (modalConn) {
+                modalConn.textContent = globalConn;
+                if (globalConn === 'CONNECTED') {
+                    modalConn.className = 'badge badge-green';
+                } else if (globalConn === 'SIMULATED') {
+                    modalConn.className = 'badge badge-amber';
+                } else {
+                    modalConn.className = 'badge badge-gray';
+                }
+            }
+            
+            // If simulation is not overriding, pull latest values
+            if (!soilSimulationOverride) {
+                const slider = document.getElementById('soil-calibration-slider');
+                if (slider) {
+                    if (prevValues.soil !== null) {
+                        slider.value = Math.round(prevValues.soil);
+                        document.getElementById('sim-slider-val').textContent = `${slider.value}%`;
+                        updateSoilUI(prevValues.soil);
+                    } else {
+                        slider.value = 50;
+                        document.getElementById('sim-slider-val').textContent = `50%`;
+                        updateSoilUI(50);
+                    }
+                }
+                document.getElementById('btn-reset-simulator').style.display = 'none';
+                document.getElementById('sim-slider-badge').style.display = 'none';
+            }
+            
+            // Initialize or redraw chart & logs
+            setTimeout(() => {
+                if (!modalSoilChartInstance) {
+                    initModalSoilChart();
+                } else {
+                    modalSoilChartInstance.resize();
+                }
+                updateModalSoilChart();
+                fetchModalSoilLogs();
+            }, 100);
+        }
+
+        function closeSoilModal() {
+            const modal = document.getElementById('soil-detail-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function initModalSoilChart() {
+            const ctx = document.getElementById('modalSoilChart').getContext('2d');
+            
+            modalSoilChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Soil Moisture (%)',
+                        data: [],
+                        borderColor: '#0f766e',
+                        backgroundColor: 'rgba(15, 118, 110, 0.04)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#0f766e',
+                        pointBorderColor: 'rgba(255, 255, 255, 0.95)',
+                        pointBorderWidth: 1.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#475569',
+                                font: { family: 'Outfit', size: 9, weight: '600' },
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 6
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(15, 23, 42, 0.06)' },
+                            ticks: {
+                                color: '#475569',
+                                font: { family: 'Outfit', size: 9, weight: '600' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateModalSoilChart() {
+            if (!modalSoilChartInstance || localHistoryCache.length === 0) return;
+            
+            const slice = localHistoryCache.slice(-15);
+            const labels = slice.map(d => {
+                const parts = d.timestamp.split(' ');
+                return parts.length > 1 ? parts[1] : d.timestamp;
+            });
+            const values = slice.map(d => parseFloat(d.soil_pct));
+            
+            modalSoilChartInstance.data.labels = labels;
+            modalSoilChartInstance.data.datasets[0].data = values;
+            modalSoilChartInstance.update();
+        }
+
+        function fetchModalSoilLogs() {
+            fetch('/api/log?limit=5')
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'SUCCESS' && res.data) {
+                        const rows = res.data;
+                        const body = document.getElementById('modal-soil-log-body');
+                        if (!body) return;
+                        
+                        body.innerHTML = '';
+                        if (rows.length === 0) {
+                            body.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px; color:var(--text-muted);">No records found in database.</td></tr>`;
+                            return;
+                        }
+                        
+                        rows.forEach(r => {
+                            const timeStr = r.timestamp.split(' ')[1] || r.timestamp;
+                            const soilVal = parseFloat(r.soil_pct).toFixed(0) + '%';
+                            
+                            let statusText = "OPTIMAL";
+                            let statusBadge = "badge-green";
+                            if (parseFloat(r.soil_pct) < 20) {
+                                statusText = "DRY";
+                                statusBadge = "badge-red";
+                            } else if (parseFloat(r.soil_pct) > 80) {
+                                statusText = "WET";
+                                statusBadge = "badge-amber";
+                            }
+                            
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="font-family:var(--font-mono);">${timeStr}</td>
+                                <td style="font-family:var(--font-mono); font-weight:800; color:var(--color-mint);">${soilVal}</td>
+                                <td><span class="badge ${statusBadge}" style="font-size:9.5px; padding:1px 6px;">${statusText}</span></td>
+                            `;
+                            body.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(err => console.error("Error fetching modal soil logs:", err));
+        }
+
+        function disableSimulationOverride() {
+            soilSimulationOverride = false;
+            
+            document.getElementById('btn-reset-simulator').style.display = 'none';
+            document.getElementById('sim-slider-badge').style.display = 'none';
+            
+            if (prevValues.soil !== null) {
+                const slider = document.getElementById('soil-calibration-slider');
+                if (slider) {
+                    slider.value = Math.round(prevValues.soil);
+                    document.getElementById('sim-slider-val').textContent = `${slider.value}%`;
+                }
+                updateSoilUI(prevValues.soil);
+            } else {
+                updateSoilUI(50);
+            }
+        }
+
         // Setup and kickoff
         window.addEventListener('DOMContentLoaded', () => {
             initChart();
@@ -3298,6 +4615,41 @@
                 if (btn) btn.classList.add('visible');
             }, 2000);
 
+            // Bind calibration slider events
+            const slider = document.getElementById('soil-calibration-slider');
+            if (slider) {
+                slider.addEventListener('input', function(e) {
+                    const val = parseInt(e.target.value);
+                    const valEl = document.getElementById('sim-slider-val');
+                    if (valEl) valEl.textContent = `${val}%`;
+                    
+                    soilSimulationOverride = true;
+                    soilSimulationValue = val;
+                    
+                    const resetBtn = document.getElementById('btn-reset-simulator');
+                    const badge = document.getElementById('sim-slider-badge');
+                    if (resetBtn) resetBtn.style.display = 'inline-block';
+                    if (badge) {
+                        badge.style.display = 'inline-block';
+                        badge.textContent = 'Simulation Mode';
+                        badge.className = 'badge badge-amber';
+                    }
+                    
+                    updateSoilUI(val, true);
+                });
+            }
+
+            // Close modal when clicking outside
+            window.addEventListener('click', function(e) {
+                const soilModal = document.getElementById('soil-detail-modal');
+                const pdfModal = document.getElementById('pdf-preview-modal');
+                if (e.target === soilModal) {
+                    closeSoilModal();
+                } else if (e.target === pdfModal) {
+                    closePDFPreview();
+                }
+            });
+
             // Initial loads
             pollLatest();
             fetchSystemStats();
@@ -3309,6 +4661,14 @@
             setInterval(fetchSystemStats, 4000);  // Min/Max/Avg (4s)
             setInterval(fetchSystemLogs, 4000);   // Live Table updates (4s)
             setInterval(fetchChartHistory, 6000); // Chart updates (6s)
+            
+            // Recurrent poller for modal logs (only works when modal is open)
+            setInterval(() => {
+                const soilModal = document.getElementById('soil-detail-modal');
+                if (soilModal && soilModal.style.display === 'flex') {
+                    fetchModalSoilLogs();
+                }
+            }, 4000);
         });
     </script>
 
@@ -3358,16 +4718,16 @@
                             <div class="report-stat-value" id="report-stat-total">0</div>
                         </div>
                         <div class="report-stat-box">
+                            <div class="report-stat-label">Avg Soil Moisture</div>
+                            <div class="report-stat-value" id="report-stat-avg-soil">0.0 %</div>
+                        </div>
+                        <div class="report-stat-box">
                             <div class="report-stat-label">Avg Temperature</div>
                             <div class="report-stat-value" id="report-stat-avg-temp">0.0 °C</div>
                         </div>
                         <div class="report-stat-box">
                             <div class="report-stat-label">Avg Humidity</div>
                             <div class="report-stat-value" id="report-stat-avg-humidity">0.0 %</div>
-                        </div>
-                        <div class="report-stat-box">
-                            <div class="report-stat-label">Avg Soil Moisture</div>
-                            <div class="report-stat-value" id="report-stat-avg-soil">0.0 %</div>
                         </div>
                     </div>
                     
@@ -3377,9 +4737,9 @@
                             <tr>
                                 <th style="width: 70px; text-align: left;">ID</th>
                                 <th style="width: 170px; text-align: left;">Timestamp</th>
+                                <th style="text-align: center; width: 140px;">Soil Moisture (%)</th>
                                 <th style="text-align: center; width: 100px;">Temp (°C)</th>
                                 <th style="text-align: center; width: 110px;">Humidity (%)</th>
-                                <th style="text-align: center; width: 140px;">Soil Moisture (%)</th>
                                 <th style="text-align: center; width: 120px;">Node Status</th>
                                 <th style="text-align: center; width: 110px;">Alert Flag</th>
                             </tr>
@@ -3404,6 +4764,131 @@
                     </svg>
                     Print / Save PDF
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOIL MOISTURE TELEMETRY COCKPIT MODAL -->
+    <div id="soil-detail-modal" class="soil-modal-overlay" style="display: none;">
+        <div class="soil-modal-card">
+            <!-- Modal Header -->
+            <div class="soil-modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="background-color:#e6fcf5; color:#0f766e; border:1px solid #96f2d7; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Soil Moisture Telemetry Cockpit</h3>
+                        <span class="soil-modal-subtitle">Main IoT Environmental Focus Panel</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="badge badge-mint" id="sim-slider-badge" style="display: none; font-size: 9px; padding: 2px 6px;">Simulation Mode</span>
+                    <span class="badge badge-mint" id="modal-connection-badge">SIMULATED</span>
+                    <button class="soil-close-btn" onclick="closeSoilModal()">&times;</button>
+                </div>
+            </div>
+            
+            <!-- Modal Body Scroll Area -->
+            <div class="soil-modal-scroll-area">
+                <div class="soil-modal-grid">
+                    
+                    <!-- Left Column: Primary Visualization & Smart Irrigation Details -->
+                    <div class="soil-modal-col-left">
+                        <div class="glass-card modal-vis-card">
+                            <div class="modal-large-gauge-container">
+                                <svg class="modal-gauge-svg" width="220" height="220" viewBox="0 0 220 220">
+                                    <circle class="gauge-bg" cx="110" cy="110" r="100" stroke-width="10"></circle>
+                                    <circle class="gauge-progress" id="modal-soil-gauge-progress" cx="110" cy="110" r="100" stroke-width="10"></circle>
+                                </svg>
+                                <div class="modal-gauge-content">
+                                    <!-- Animated Water Droplet Icon -->
+                                    <svg class="water-droplet-icon" width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                                    </svg>
+                                    <div class="modal-gauge-value" id="modal-soil-readout">--%</div>
+                                    <div class="modal-gauge-status" id="modal-soil-status-badge">Awaiting...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="modal-irrigation-card">
+                                <h4 class="irrigation-title">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px;">
+                                        <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Smart Irrigation Recommendation
+                                </h4>
+                                <p class="irrigation-desc" id="modal-soil-recommendation">Awaiting data ingestion stream to evaluate hydration safety rules...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive Calibration Simulator & Real-time Trends -->
+                    <div class="soil-modal-col-right">
+                        
+                        <!-- Real-time Trends Chart -->
+                        <div class="glass-card modal-chart-card">
+                            <h4 class="modal-section-title">Telemetry Trend History (Last 15 Samples)</h4>
+                            <div class="modal-chart-container">
+                                <canvas id="modalSoilChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Interactive Calibration Simulator -->
+                        <div class="glass-card modal-simulator-card">
+                            <h4 class="modal-section-title">Calibration & Testing Simulator</h4>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500;">
+                                Drag the slider to override telemetry input and mock-test how the gauges, system status banners, alerts, and smart recommendations behave.
+                            </p>
+                            <div class="simulator-slider-group">
+                                <div class="slider-labels">
+                                    <span>Moisture Input: <strong id="sim-slider-val">50%</strong></span>
+                                    <button class="reset-simulator-btn" id="btn-reset-simulator" style="display: none;" onclick="disableSimulationOverride()">
+                                        Return to Live Telemetry
+                                    </button>
+                                </div>
+                                <input type="range" min="0" max="100" value="50" class="simulator-slider" id="soil-calibration-slider">
+                                <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 4px;">
+                                    <span>0% Dry</span>
+                                    <span>20% Critical</span>
+                                    <span>80% Wet</span>
+                                    <span>100% Sat</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mini History Grid -->
+                        <div class="glass-card modal-log-card">
+                            <h4 class="modal-section-title">Recent Moisture Logs (Database Entries)</h4>
+                            <div class="modal-log-table-container">
+                                <table class="modal-log-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Reading</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modal-soil-log-body">
+                                        <tr>
+                                            <td colspan="3" style="text-align: center; font-size: 11px; padding: 12px; color: var(--text-muted);">
+                                                Loading historical logs...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div class="soil-modal-actions">
+                <button class="soil-btn soil-btn-primary" onclick="closeSoilModal()">Close Telemetry Cockpit</button>
             </div>
         </div>
     </div>

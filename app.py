@@ -20,7 +20,7 @@ DB_NAME = "robosense_db"
 
 # Set to True if you want to generate high-fidelity simulated values inside MySQL 
 # in case real physical hardware is not connected. Set to False for real production.
-SIMULATE_DATA = False
+SIMULATE_DATA = True
 
 
 
@@ -46,6 +46,8 @@ system_status = {
     "uptime_start": time.time(),
     "total_readings_logged": 0
 }
+
+in_memory_readings = []
 
 # Thread lock for thread-safe database operations and state updates
 db_lock = threading.Lock()
@@ -138,13 +140,33 @@ def bootstrap_database():
 # DATA INGESTION & PARSING
 # ==========================================
 def log_reading_to_db(temp, hum, soil, status, flag):
-    """Inserts a sensor reading row into MySQL with thread-safety."""
-    global system_status
+    """Inserts a sensor reading row into MySQL with thread-safety, falling back to in-memory log."""
+    global system_status, in_memory_readings
+    
+    timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    
     with db_lock:
+        system_status["total_readings_logged"] += 1
+        new_reading = {
+            "id": system_status["total_readings_logged"],
+            "temp_c": temp,
+            "humidity_pct": hum,
+            "soil_pct": soil,
+            "status": status,
+            "flag": flag,
+            "timestamp": timestamp_str
+        }
+        system_status["last_reading"] = new_reading
+        
+        # Log to in-memory list
+        in_memory_readings.append(new_reading)
+        if len(in_memory_readings) > 100:
+            in_memory_readings.pop(0)
+            
         conn = get_db_connection()
         if not conn:
-            print("[Database Log Fail] Database not reachable. Skipping write.")
-            return False
+            print(f"[Database Log Fail] Database not reachable. Saved reading #{new_reading['id']} in-memory.")
+            return True
         
         cursor = conn.cursor()
         try:
@@ -154,20 +176,10 @@ def log_reading_to_db(temp, hum, soil, status, flag):
             """
             cursor.execute(query, (temp, hum, soil, status, flag))
             conn.commit()
-            
-            system_status["total_readings_logged"] += 1
-            system_status["last_reading"] = {
-                "temp_c": temp,
-                "humidity_pct": hum,
-                "soil_pct": soil,
-                "status": status,
-                "flag": flag,
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-            }
             return True
         except mysql.connector.Error as err:
-            print(f"[Database Insert Error] {err}")
-            return False
+            print(f"[Database Insert Error] {err}. Saved reading #{new_reading['id']} in-memory.")
+            return True
         finally:
             cursor.close()
             conn.close()
@@ -419,6 +431,9 @@ def get_history():
         finally:
             cursor.close()
             conn.close()
+    else:
+        # Fallback to in-memory list (which is already in oldest-to-newest append order)
+        data_points = in_memory_readings[-limit:]
             
     return jsonify({
         "status": "SUCCESS",
@@ -474,6 +489,28 @@ def get_stats():
         finally:
             cursor.close()
             conn.close()
+    else:
+        # Fallback to in-memory stats
+        if in_memory_readings:
+            temps = [r["temp_c"] for r in in_memory_readings]
+            hums = [r["humidity_pct"] for r in in_memory_readings]
+            soils = [r["soil_pct"] for r in in_memory_readings]
+            stats_data["row_count"] = len(in_memory_readings)
+            stats_data["temp"] = {
+                "min": round(min(temps), 1),
+                "max": round(max(temps), 1),
+                "avg": round(sum(temps) / len(temps), 1)
+            }
+            stats_data["humidity"] = {
+                "min": round(min(hums), 1),
+                "max": round(max(hums), 1),
+                "avg": round(sum(hums) / len(hums), 1)
+            }
+            stats_data["soil"] = {
+                "min": round(min(soils), 1),
+                "max": round(max(soils), 1),
+                "avg": round(sum(soils) / len(soils), 1)
+            }
             
     return jsonify({
         "status": "SUCCESS",
@@ -505,6 +542,9 @@ def get_log():
         finally:
             cursor.close()
             conn.close()
+    else:
+        # Fallback to in-memory list (reverse chronological order)
+        logs = list(reversed(in_memory_readings))[:limit]
             
     return jsonify({
         "status": "SUCCESS",
@@ -515,18 +555,20 @@ def get_log():
 @app.route('/api/clear', methods=['POST'])
 def clear_logs():
     """Utility endpoint to truncate logs and reset metrics for testing."""
-    global system_status
+    global system_status, in_memory_readings
     with db_lock:
+        in_memory_readings = []
+        system_status["total_readings_logged"] = 0
+        system_status["last_reading"] = None
+        
         conn = get_db_connection()
         if not conn:
-            return jsonify({"status": "ERROR", "message": "Database not reachable"}), 500
+            return jsonify({"status": "SUCCESS", "message": "In-memory database successfully cleared"})
         
         cursor = conn.cursor()
         try:
             cursor.execute("TRUNCATE TABLE sensor_readings")
             conn.commit()
-            system_status["total_readings_logged"] = 0
-            system_status["last_reading"] = None
             return jsonify({"status": "SUCCESS", "message": "Database successfully cleared"})
         except Exception as e:
             return jsonify({"status": "ERROR", "message": str(e)}), 500
